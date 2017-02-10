@@ -3,120 +3,141 @@
 //----- LocoMouse_Parameters
 LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 
+	//In case there are exceptions:
+	std::string error_message = "Invalid configuration parameter: ";
+
 	cv::FileStorage config_file(config_file_name, cv::FileStorage::READ);
 	if (!config_file.isOpened()) {
-		std::cout << "Failed to read config file!" << std::endl;
-		//FIXME: Throw exception and handle it properly!
+		throw std::invalid_argument("Failed to read config file: " + config_file_name + ".");
 	}
 
 	int lm_debug;
-	config_file["debug"] >> lm_debug;
-	LM_DEBUG = lm_debug > 0;
+	config_file["verbose_debug"] >> lm_debug;
+	LM_DEBUG = (bool) lm_debug;
+
+	config_file["N_debug_frames"] >> LM_N_FRAMES_TO_DEBUG;
+	
+	if (LM_N_FRAMES_TO_DEBUG == 0) {
+		error_message += "N_debug_frames must not be 0.";
+		throw std::invalid_argument(error_message);
+	}
+
+	config_file["parameters_for_visual_debug"] >> lm_debug;
+	LM_VISUAL_DEBUG = (bool) lm_debug;
+	
 
 	//Connectivity for the Connected components algorithm.
 	config_file["conn_comp_connectivity"] >> conn_comp_connectivity;
 
 	if ((conn_comp_connectivity != 4) && (conn_comp_connectivity != 8)) {
-		std::cout << "conn_comp_connectivity must be either 4 or 8!" << std::endl;
-		////return -1;
+		error_message += "conn_comp_connectivity must be either 4 or 8. Was " + std::to_string(conn_comp_connectivity) + ".";
+		throw std::invalid_argument (error_message);
 	}
 
 	//Median Filter used for bb estimation:
 	config_file["median_filter_size"] >> median_filter_size;
 	if (median_filter_size % 2 == 0) {
-		std::cout << "median_filter_size must be odd." << std::endl;
-		////return -2;
+		error_message += "median_filter_size must be odd. Was " + std::to_string(median_filter_size) + ".";
+		throw std::invalid_argument(error_message);
 	}
 
 	config_file["min_pixel_visible"] >> min_pixel_visible; //Minimum number of visible pixels to consider a valid BB boundary.
 	if (min_pixel_visible < 0) {
-		std::cout << "min_pixel_visible must be non-negative." << std::endl;
-		//return -3;
+		error_message += "min_pixel_visible must be non-negative. Was " + std::to_string(min_pixel_visible) + ".";
+		throw std::invalid_argument(error_message);
 	}
 
 	config_file["top_bottom_min_overlap"] >> top_bottom_min_overlap; // Boxes must overlap for at least 70% for matches to be considered valid.
 	if ((top_bottom_min_overlap < 0) || (top_bottom_min_overlap > 1)) {
-		std::cout << "top_bottom_min_overlap must belong to [0,1]." << std::endl;
-		//return -4;
+		error_message += "top_bottom_min_overlap must belong to [0,1]. Was " + std::to_string(top_bottom_min_overlap) + ".";
+		throw std::invalid_argument(error_message);
 	}
 
 	config_file["maximum_normalized_beacon_distance"] >> maximum_normalized_beacon_distance; //Candidates with normalized distance lower than this are suppressed.
 	if ((maximum_normalized_beacon_distance < 0) || (maximum_normalized_beacon_distance > 1)) {
-		std::cout << "maximum_normalized_beacon_distance must belong to [0,1]." << std::endl;
-		//return -5;
+		error_message += "maximum_normalized_beacon_distance must belong to [0,1]. Was " + std::to_string(maximum_normalized_beacon_distance) + ".";
+		throw std::invalid_argument(error_message);
 	}
 	//FIXME: These two parameters are set in pixels and they depend on the framerate and resolution of the video. Calibrate with the training videos and set them as percentages of the bounding box dimension for a generalized behaviour.
 	config_file["max_displacement"] >> max_displacement; //Maximum displacement in pixels allowed between two frames (There is a velocity component added to this).
 	if (max_displacement < 0) {
-		std::cout << "max_displacement must be non-negative." << std::endl;
-		//return -6;
+		error_message += "max_displacement must be non-negative. Was " + std::to_string(max_displacement) + ".";
+		throw std::invalid_argument(error_message);
+
 	}
 
 	config_file["max_displacement_top"] >> max_displacement_top;
 	if (max_displacement_top < 0) {
-		std::cout << "max_displacement_top must be non-negative." << std::endl;
-		//return -7;
+		error_message += "max_displacement_top must be non-negative. Was " + std::to_string(max_displacement_top) + ".";
+
+		throw std::invalid_argument(error_message);
 	}
 
 	config_file["occlusion_grid_spacing_pixels_top"] >> occlusion_grid_spacing_pixels_top;
 	if (occlusion_grid_spacing_pixels_top < 0) {
-		std::cout << "occlusion_grid_spacing_pixels_top must be non-negative." << std::endl;
-		//return -8;
+		error_message += "occlusion_grid_spacing_pixels_top must be non-negative. Was " + std::to_string(occlusion_grid_spacing_pixels_top) + ".";
+
+		throw std::invalid_argument(error_message);
 	}
 
 	config_file["occlusion_grid_spacing_pixels"] >> occlusion_grid_spacing_pixels; //Spacing of the occlusion grid in pixels, highly dependent on resolution.
 	if (occlusion_grid_spacing_pixels < 0) {
-		std::cout << "occlusion_grid_spacing_pixels must be non-negative." << std::endl;
-		//return -9;
+		error_message += "occlusion_grid_spacing_pixels must be non-negative.. Was " + std::to_string(occlusion_grid_spacing_pixels) + ".";
+
+		throw std::invalid_argument(error_message);
 	}
 
 	config_file["body_proportion_bounding_box"] >> body_proportion_bounding_box; //The occlusion grid extends for only this percentage of the BB on the right side.
 	if ((body_proportion_bounding_box < 0) || (body_proportion_bounding_box > 1)) {
-		std::cout << "body_proportion_bounding_box must be non-negative." << std::endl;
-		//return -10;
+		error_message += "body_proportion_bounding_box must be non-negative. Was " + std::to_string(body_proportion_bounding_box) + ".";
+
+		throw std::invalid_argument(error_message);
 	}
 
 	config_file["tail_sub_bounding_box"] >> tail_sub_bounding_box; //The percentage counting from the left of the box where the tail is looked for.
 	if ((tail_sub_bounding_box < 0) || (tail_sub_bounding_box > 1)) {
-		std::cout << "tail_sub_bounding_box must be non-negative." << std::endl;
-		//return -11;
+		error_message += "tail_sub_bounding_box must be non-negative. Was " + std::to_string(tail_sub_bounding_box) + ".";
+		throw std::invalid_argument(error_message);
 	}
 
 	config_file["alpha_vel"] >> alpha_vel; //Relative term for the velocity costs on the match2nd tracking algorithm.
 	if (alpha_vel < 0) {
-		std::cout << "alpha_vel must be non-negative." << std::endl;
-		//return -12;
+		error_message += "alpha_vel must be non-negative. Was "+ std::to_string(alpha_vel) + ".";
+		std::cout << "Error message is: " << error_message << std::endl;
+		throw std::invalid_argument(error_message);
 	}
 
 	config_file["alpha_vel_top"] >> alpha_vel_top;
 	if (alpha_vel_top < 0) {
-		std::cout << "alpha_vel_top must be non-negative." << std::endl;
-		//return -13;
+		error_message += "alpha_vel_top must be non-negative. Was " + std::to_string(alpha_vel_top) + ".";
+		throw std::invalid_argument(error_message);
+
 	}
 
 	config_file["pairwise_occluded_cost"] >> pairwise_occluded_cost;//Cost for moving to and between occluded points on the match2nd algorithm.
-	if (alpha_vel_top < 0) {
-		std::cout << "pairwise_occluded_cost must be non-negative." << std::endl;
-		//return -14;
+	if (pairwise_occluded_cost < 0) {
+		error_message += "pairwise_occluded_cost must be non-negative. Was " + std::to_string(pairwise_occluded_cost) + ".";
+		throw std::invalid_argument(error_message);
 	}
 
 	config_file["moving_average_window"] >> moving_average_window; //Must be odd.
 	if (moving_average_window % 2 == 0) {
-		std::cout << "moving_average_window must be odd." << std::endl;
-		//return -15;
+		error_message += "moving_average_window must be odd. Was " + std::to_string(moving_average_window) + ".";
+		throw std::invalid_argument(error_message);
 	}
 
 	config_file["mode"] >> mode_int;
 	if (mode_int > 2 || mode_int < 0) {
-		std::cout << "mode must belong to {0,1,2}." << std::endl;
-		//return -16;
+		error_message += "mode must belong to {0,1,2}. Was " + std::to_string(mode_int) + ".";
+		throw std::invalid_argument(error_message);
 	}
 
 	cv::Mat W;
 	config_file["location_prior"] >> W;
 	if ((W.cols != 7) || (W.rows != 5)) {
-		std::cout << "location_prior must be a 5x7 matrix." << std::endl;
-		//return -17;
+		error_message += "location_prior must be a 5x7 matrix. Was " + std::to_string(W.rows) + ".";
+
+		throw std::invalid_argument(error_message.c_str());
 	}
 
 	for (int i_features = 0; i_features < N_paws; ++i_features) {
@@ -250,6 +271,8 @@ LocoMouse_Parameters& LocoMouse_Parameters::operator=(LocoMouse_Parameters &&oth
 	REF_PATH = other.REF_PATH;
 	LM_DEBUG = other.LM_DEBUG;
 	LM_FRAME_TO_DEBUG = other.LM_FRAME_TO_DEBUG;
+	LM_N_FRAMES_TO_DEBUG = other.LM_N_FRAMES_TO_DEBUG;
+	LM_VISUAL_DEBUG = other.LM_VISUAL_DEBUG;
 
 	for (unsigned int i_paws = 0; i_paws < N_paws; ++i_paws) {
 		PRIOR_PAW.push_back(other.PRIOR_PAW[i_paws]);
@@ -265,11 +288,8 @@ LocoMouse_Parameters& LocoMouse_Parameters::operator=(LocoMouse_Parameters &&oth
 //----- LocoMouse:
 LocoMouse::LocoMouse(int argc, char* argv[]) {
 
-	std::cout << "Using OpenCV version: " << CV_VERSION << std::endl;
-
 	if (argc != 8) {
-		//FIXME: Find out how to stop the code from progressing.
-	
+
 		std::cout << "Warning: Invalid input list. The input should be: LocoMouse config.yml video.avi background.png model_file.yml calibration_file.yml side_char output_folder." << std::endl;
 		std::cout << "Attempting to run with default paramters..." << std::endl;
 
@@ -312,9 +332,6 @@ LocoMouse::LocoMouse(int argc, char* argv[]) {
 
 	configurePath();
 
-	
-
-
 	//Initializing other variables that depend on N_FRAMES
 	BB_X_POS.reserve(N_FRAMES);
 	BB_Y_BOTTOM_POS.reserve(N_FRAMES);
@@ -330,12 +347,6 @@ LocoMouse::LocoMouse(int argc, char* argv[]) {
 	}
 
 	if (LM_PARAMS.LM_DEBUG) {
-		DEBUG_OUTPUT = cv::FileStorage(debug_file, cv::FileStorage::WRITE);
-
-		if (!DEBUG_OUTPUT.isOpened()) {
-			throw std::runtime_error(Stream_Formatter() << "Could not create debug file: " << debug_file << "\n");
-			//FIXME: Throw exception.
-		}
 
 		DEBUG_TEXT.open(debug_text);
 
@@ -373,8 +384,7 @@ void LocoMouse::loadVideo() {
 	V = cv::VideoCapture(VIDEO_FILE);
 
 	if (!V.isOpened()) {
-		std::cout << "Error: Could not open the video file." << std::endl;
-		//FIXME: Find out how to throw an error here.
+		throw std::invalid_argument("Could not open the video file: " + VIDEO_FILE + ".");
 	}
 
 	//FIXME: So far opencv has this option but it doesn't work. conversion has to be done manually.
@@ -384,15 +394,15 @@ void LocoMouse::loadVideo() {
 	//Getting Video frames:
 	if (LM_PARAMS.LM_DEBUG) {
 		const uint N_frames_video = V.get(cv::CAP_PROP_FRAME_COUNT);
-		N_FRAMES = (N_frames_video < N_FRAMES_DEBUG) ? N_frames_video : N_FRAMES_DEBUG;
+
+		N_FRAMES = (N_frames_video < LM_PARAMS.LM_N_FRAMES_TO_DEBUG) ? N_frames_video : LM_PARAMS.LM_N_FRAMES_TO_DEBUG;
 	}
 	else {
 		N_FRAMES = V.get(cv::CAP_PROP_FRAME_COUNT);
 	}
 
 	if (N_FRAMES < 1) {
-		std::cout << "Error: Video has no images to read from." << std::endl;
-		//FIXME: Find out how to throw an error here.
+		throw std::invalid_argument("Error: Video has no images to read from.");
 	}
 
 	return;
@@ -404,8 +414,7 @@ void LocoMouse::loadBackground() {
 
 	BKG = cv::imread(BKG_FILE, CV_LOAD_IMAGE_GRAYSCALE);
 	if (!BKG.data) {
-		std::cout << "Error: Could not open the background image." << std::endl;
-		//FIXME: Find out how to throw an error here.
+		throw std::invalid_argument("Could not open the background image: " + BKG_FILE + ".");
 	}
 
 	if (LM_PARAMS.LM_DEBUG) {
@@ -422,37 +431,28 @@ void LocoMouse::loadCalibration() {
 	cv::FileStorage model_file(CALIBRATION_FILE, cv::FileStorage::READ);
 
 	if (!model_file.isOpened()) {
-		//FIXME: Find a way to throw an error here.
-		////return -1;
+		throw std::invalid_argument(Stream_Formatter() << "Error: Could not open the calibration file: " << CALIBRATION_FILE << ".\n");
 	}
 
 	model_file["ind_warp_mapping"] >> CALIBRATION;
 	if (CALIBRATION.empty()) {
-		std::cout << "ind_warp_mapping is empty or undefined!" << std::endl;
-		//FIXME: Find a way to throw an error here.
-		////return -1;
+		throw std::invalid_argument("ind_warp_mapping is empty or undefined.");
 	}
 
 	//model_file["inv_ind_warp_mapping"] >> calibration_inv;
 
 	model_file["view_boxes"] >> Mtemp;
 	if (Mtemp.empty()) {
-		std::cout << "view_boxes is empty or undefined!" << std::endl;
-		//FIXME: Find a way to throw an error here.
-		////return -1;
+		throw std::invalid_argument("view_boxes is empty or undefined.");
 	}
 	model_file.release();
 
 	if ((Mtemp.rows != 2) || (Mtemp.cols != 4)) {
-		std::cout << "view_boxes sould be a 2x4 matrix!" << std::endl;
-		//FIXME: Find a way to throw an error here.
-		////return -1;
+		throw std::invalid_argument("view_boxes sould be a 2x4 matrix.");
 	}
 
 	if (Mtemp.type() != CV_32SC1) {
-		std::cout << "Bounding boxes must be defined with integer pixel positions!" << std::endl;
-		//FIXME: Find a way to throw an error here.
-		////return -1;
+		throw std::invalid_argument("Bounding boxes must be defined with integer pixel positions!");
 	};
 
 	int *pM = Mtemp.ptr<int>(0);
@@ -472,23 +472,21 @@ void LocoMouse::loadCalibration() {
 }
 
 void LocoMouse::loadFlip() {
-	//FIXME: Find a way to throw exceptions here.
+
 	if (FLIP_CHAR.length() != 1) {
-		std::cout << "Mouse side option must be either \"L\" or \"R\"." << std::endl;
-		////return -1;
+		throw std::invalid_argument("Mouse side option must be either \"L\" or \"R\".");
 	}
 
 	if (FLIP_CHAR[0] == 'L') {
 		IMAGE_FLIP = true;
-		//return 1;
+		return;
 	}
 	else if (FLIP_CHAR[0] == 'R') {
 		IMAGE_FLIP = false;
-		//return 1;
+		return;
 	}
 	else {
-		std::cout << "Mouse side option must be either \"L\" or \"R\"." << std::endl;
-		////return -1;
+		throw std::invalid_argument("Mouse side option must be either \"L\" or \"R\".");
 	}
 
 	return;
@@ -521,9 +519,8 @@ void LocoMouse::validateImageVideoSize() {
 	}
 
 	if ((int)min_calib_val < 0 | (int)max_calib_val >= (N_row_video*N_col_video)) {
-		std::cout << "Error: Calibration mapping indices out of range. Minimum index is 0, found  " << min_calib_val << "; Maximum index is : " << (N_row_video*N_col_video) << ", found " << max_calib_val << std::endl;
-		//FIXME: Call exception!
-		////return -1;
+		throw std::runtime_error(Stream_Formatter() << "Calibration mapping indices out of range. Minimum index is 0, found  " << min_calib_val << "; Maximum index is : " << (N_row_video*N_col_video) << ", found " << max_calib_val << '\n');
+
 	}
 }
 
@@ -564,15 +561,12 @@ void LocoMouse::computeBoundingBox() {
 	//FIXME: The median filter is an option for this method in particular. Define it properly in the config.yml file as such.
 
 	if (LM_PARAMS.LM_DEBUG) {
-
 		DEBUG_TEXT << "===== Computing the bounding box coordinates: " << std::endl;
-
 	}
-
 
 	uint padding_offset = LM_PARAMS.median_filter_size / 2;
 	uint padding_size = padding_offset * 2;
-	
+
 	cv::Mat I_median = cv::Mat::zeros(N_ROWS + padding_size, N_COLS + padding_size, CV_8UC1); //Padded image for median filtering.
 	cv::Rect real_I = cv::Rect(padding_offset, padding_offset, N_COLS, N_ROWS); //ROI of the real image i.e. offsetting the padding.
 
@@ -602,6 +596,7 @@ void LocoMouse::computeBoundingBox() {
 	std::vector<double> bb_x(N_FRAMES), bb_y_bottom(N_FRAMES), bb_y_side(N_FRAMES), bb_width(N_FRAMES), bb_height_bottom(N_FRAMES), bb_height_side(N_FRAMES);
 
 	if (LM_PARAMS.LM_DEBUG) {
+		
 		DEBUG_TEXT << "----- Computing the bounding box position per frame: " << I_center.size() << std::endl;
 	}
 
@@ -609,6 +604,7 @@ void LocoMouse::computeBoundingBox() {
 
 		readFrame(I_center);
 		if (LM_PARAMS.LM_DEBUG) {
+
 			DEBUG_TEXT << "Read frame " << i_frames << std::endl;
 		}
 		computeMouseBox(I_median, I_center, I_side_view, I_bottom_view, bb_x[i_frames], bb_y_bottom[i_frames], bb_y_side[i_frames], bb_width[i_frames], bb_height_bottom[i_frames], bb_height_side[i_frames], LM_PARAMS);
@@ -623,6 +619,7 @@ void LocoMouse::computeBoundingBox() {
 	computeMouseBoxSize(bb_width, bb_height_bottom, bb_height_side, BB_SIDE_MOUSE, BB_BOTTOM_MOUSE);
 
 	if (LM_PARAMS.LM_DEBUG) {
+
 		DEBUG_TEXT << "----- Final BB sizes: " << std::endl;
 		DEBUG_TEXT << "BB_SIDE_MOUSE: " << BB_SIDE_MOUSE << std::endl;
 		DEBUG_TEXT << "BB_BOTTOM_MOUSE: " << BB_BOTTOM_MOUSE << std::endl;
@@ -634,6 +631,7 @@ void LocoMouse::computeBoundingBox() {
 	vecmovingaverage(bb_y_side, BB_Y_SIDE_POS, LM_PARAMS.moving_average_window);
 
 	if (LM_PARAMS.LM_DEBUG) {
+
 		DEBUG_TEXT << "===== END " << std::endl << std::endl;
 	}
 
@@ -725,7 +723,7 @@ void LocoMouse::initializeFeatureLoop() {
 
 	//Resetting the video pointer as the computations of the bounding box could have read it:
 	V.set(CV_CAP_PROP_POS_FRAMES, 0);
-	CURRENT_FRAME = 0;
+	CURRENT_FRAME = -1; //Frame index is incremented on read;
 
 }
 
@@ -803,12 +801,18 @@ void LocoMouse::computeUnaryCostsBottom() {
 
 void LocoMouse::computePairwiseCostsBottom() {
 
-	//Computing pairwise potentials:
-	MATSPARSE temp = pairwisePotential(CANDIDATES_BOTTOM_PAW.end()[-2], CANDIDATES_BOTTOM_PAW.end()[-1], ONG_BR_corner, (double)LM_PARAMS.occlusion_grid_spacing_pixels, ONG, ONG_size, LM_PARAMS.max_displacement, LM_PARAMS.alpha_vel, LM_PARAMS.pairwise_occluded_cost);
-	PAIRWISE_BOTTOM_PAW.push_back(temp);
+	if (CURRENT_FRAME > 0) {
 
-	temp = pairwisePotential(CANDIDATES_BOTTOM_SNOUT.end()[-2], CANDIDATES_BOTTOM_SNOUT.end()[-1], ONG_BR_corner, (double)LM_PARAMS.occlusion_grid_spacing_pixels, ONG, ONG_size, LM_PARAMS.max_displacement, LM_PARAMS.alpha_vel, LM_PARAMS.pairwise_occluded_cost);
-	PAIRWISE_BOTTOM_SNOUT.push_back(temp);
+		//Computing pairwise potentials:
+		MATSPARSE temp = pairwisePotential(CANDIDATES_BOTTOM_PAW.end()[-2], CANDIDATES_BOTTOM_PAW.end()[-1], ONG_BR_corner, (double)LM_PARAMS.occlusion_grid_spacing_pixels, ONG, ONG_size, LM_PARAMS.max_displacement, LM_PARAMS.alpha_vel, LM_PARAMS.pairwise_occluded_cost);
+		PAIRWISE_BOTTOM_PAW.push_back(temp);
+
+		temp = pairwisePotential(CANDIDATES_BOTTOM_SNOUT.end()[-2], CANDIDATES_BOTTOM_SNOUT.end()[-1], ONG_BR_corner, (double)LM_PARAMS.occlusion_grid_spacing_pixels, ONG, ONG_size, LM_PARAMS.max_displacement, LM_PARAMS.alpha_vel, LM_PARAMS.pairwise_occluded_cost);
+		PAIRWISE_BOTTOM_SNOUT.push_back(temp);
+
+	}
+
+	return;
 
 }
 
@@ -862,24 +866,26 @@ void LocoMouse::computeMouseBox(cv::Mat &I_median, cv::Mat &I, cv::Mat &I_side_v
 	cv::reduce(I_bottom_view, Row_bottom, 0, CV_REDUCE_SUM, CV_32SC1);
 	cv::reduce(I_bottom_view, Col_bottom, 1, CV_REDUCE_SUM, CV_32SC1);
 
-	uint32_t lims_row_top[2], lims_col_top[2], lims_row_bottom[2], lims_col_bottom[2];
+	int lims_row_top[2], lims_col_top[2], lims_row_bottom[2], lims_col_bottom[2];
 
 	//Compute and assign values to bounding box:
-	//FIXME: Handle the empty image case. Perform the check inside the function and return a bool. Check after each run if the result was valid.
+	//NOTE: If there are no values above the threshold both vector entries are 0;
 	//Row_* marks x and with; Col_* marks y and height.
 	firstLastOverT(Row_top, I.cols, lims_row_top, LM_PARAMS.min_pixel_visible);
 	firstLastOverT(Row_bottom, I.cols, lims_row_bottom, LM_PARAMS.min_pixel_visible);
 	firstLastOverT(Col_top, I_side_view.rows, lims_col_top, LM_PARAMS.min_pixel_visible);
 	firstLastOverT(Col_bottom, I_bottom_view.rows, lims_col_bottom, LM_PARAMS.min_pixel_visible);
 
+
+	//FIXME: What if there was no BB in the image? firstLastOverT will return -1 which if left as is will distort the position of the BB.
 	//Assigning the values to the bounding box vectors:
 	bb_x = (lims_row_bottom[1] > lims_row_top[1]) ? (double)lims_row_bottom[1] : (double)lims_row_top[1];
 	bb_y_bottom = (double)lims_col_bottom[1];
 	bb_y_side = (double)lims_col_top[1];
 
-	//NOTE: By the definition of lims, the real dimensions should be [1]-[0] + 1. But to agree with the way MATLAB crops images, we drop the +1. This creates some inconsistencies as if the whole image is white, the width/height can never be the with/height of the image  
-	uint32_t wt = lims_row_top[1] - lims_row_top[0];
-	uint32_t wb = lims_row_bottom[1] - lims_row_bottom[0];
+	//FIXME: By the definition of lims, the real dimensions should be [1]-[0] + 1 due to indicies starting at 0. Was kept like this to be consistent with MATLAB.
+	unsigned int wt = lims_row_top[1] - lims_row_top[0];
+	unsigned int wb = lims_row_bottom[1] - lims_row_bottom[0];
 
 	bb_width = (wt > wb) ? (double)wt : (double)wb;
 	bb_height_bottom = (double)(lims_col_bottom[1] - lims_col_bottom[0]);
@@ -985,9 +991,8 @@ cv::Mat LocoMouse::xDist(const vector<Candidate> &P1, const vector <Candidate> &
 }
 
 vector<P22D> LocoMouse::matchViews(const Mat &boolD, const Mat &D_top_weight, const vector<Candidate> &C_b, const vector<Candidate> &C_t, bool vel_check, LocoMouse_Feature F, const Mat &Ibbb, const Mat &Itbb, const Mat &Ibbb_prev, const Mat &Itbb_prev, const Point_<int> padding_pre_bottom, const Point_<int> padding_pre_side, bool debug) {
-	//VERY IMPORTANT: I'm assuming there are not more than 255 candidates per match. This is a very safe bet, as if it happens the data is wrong for sure.
-	//FIXME: Do not pass M as argument as the function becomes feature specific
-	//FIXME: C_b and C_t are not passed as constant because I don't know how to access the methods of a class when the class is instanciated as constant.
+	//FIXME: VERY IMPORTANT - I'm assuming there are not more than 255 candidates per match. This is a very safe bet, as if it happens the data is wrong for sure.
+
 	vector<P22D> C;
 
 	int N_top = C_t.size();
@@ -1105,12 +1110,6 @@ vector<P22D> LocoMouse::matchViews(const Mat &boolD, const Mat &D_top_weight, co
 }
 
 bool LocoMouse::checkVelCriterion(const Mat& I, const Mat& I_prev, const Rect& im_box, int box_area, double alpha, double T) {
-	//Mat Ii, Iim1, S;
-	//Rect bb_aux(0, 0, im_box.width, im_box.height);
-
-	////FIXME: Replace this by cropping on a padded image!
-	//imBorderPreservingBB(I, Ii, bb_aux, im_box.x, im_box.y);
-	//imBorderPreservingBB(I_prev, Iim1, bb_aux, im_box.x, im_box.y);
 
 	cv::Mat S;
 	cv::subtract(I(im_box), I_prev(im_box), S, noArray(), CV_8UC1);
@@ -1123,8 +1122,8 @@ bool LocoMouse::checkVelCriterion(const Mat& I, const Mat& I_prev, const Rect& i
 	return (double)sum_S(0) >= ((double)box_area) * alpha;
 }
 
-
-void firstLastOverT(const cv::Mat& values, const uint L, uint32_t first_last[2], const uint T) {
+template <typename T>
+void firstLastOverT(const cv::Mat& values, const unsigned int L, T first_last[2], const T th) {
 	//Goes over all points in the vector checking if they are above the threshold. The first one triggers a flag so that the next one(s) are saved as the final point. The last one is kept.
 	//FIXME: What if there are no values?
 	bool has_first = false;
@@ -1132,22 +1131,27 @@ void firstLastOverT(const cv::Mat& values, const uint L, uint32_t first_last[2],
 	const float* p = values.ptr<float>(0);
 
 	first_last[0] = 0;
-	first_last[1] = L - 1;
+	first_last[1] = 0;
 
-	for (uint i = 0; i < L; ++i) {
-		if (p[i] > T) {
+	int index = 0;
 
-			if (has_first) {
-				first_last[1] = (uint32_t)i;
-			}
-			else
-			{
-				first_last[0] = (uint32_t)i;
+	for (unsigned int i = 0; i < L; ++i) {
+		if (p[i] > th) {
+
+			first_last[index] = (T) i;
+
+			if (!has_first) {
+				index = 1;
 				has_first = true;
 			}
-
 		}
 	}
+
+	if (!has_first) {
+		first_last[0] = -1;
+		first_last[1] = -1;
+	}
+
 	return;
 }
 
@@ -1160,25 +1164,26 @@ void LocoMouse::readFrame(cv::Mat &I) {
 	bool debug = false;
 
 	//Reading next frame:
-	if (debug)
+	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "readLocoMouse" << std::endl;
 
 	cv::Mat F;
 	V >> F;
 	if (!F.data) {
-		std::cout << "Error reading image from video!" << std::endl;
-		//FIXME: Throw exception here.
+		throw std::runtime_error(Stream_Formatter() << "Error: Failed to read image from video file." << '\n');
 	}
 
-	if (debug)
+	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "read Image ok" << std::endl;
 
-	extractChannel(F, F, 0); //Although video is grayscale opencv always reads with 3 channels.
+	CURRENT_FRAME += 1;  //Update internal frame counter.
 
+	extractChannel(F, F, 0); //Although video is grayscale opencv always reads with 3 channels.
+	
 	//if (F.type() == CV_8UC3) {
 	//	//FIXME: Don't convert as this implies computations. Simply get the first channel.
 	//	cvtColor(F, F, CV_BGR2GRAY); //The system sometimes outputs color videos, don't know why. Its a waste of time.
-	//	if (debug)
+	//	if (LM_PARAMS.LM_DEBUG)
 	//		DEBUG_TEXT << "convertColorOK" << std::endl;
 	//}
 
@@ -1186,26 +1191,26 @@ void LocoMouse::readFrame(cv::Mat &I) {
 	//FIXME: Check if cropping the BB beforehand saves computational time.
 	subtract(F, BKG, F);
 
-	if (debug)
+	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "subtract OK" << std::endl;
 
 	//Normalize the range to [0 255]
 	normalize(F, F, 0, 255, cv::NORM_MINMAX, CV_8UC1);
 
-	if (debug)
+	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "norm OK" << std::endl;
 
 	//Undistorting the image:
 	correctImage(F, I);
 
-	if (debug)
+	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "calib OK" << std::endl;
 
 	//FIXME: Should flipping be done just for the BB's? Less pixels, probably faster.
 	//Flipping if needed:
 	if (IMAGE_FLIP) {
 		flip(I, I, 1);
-		if (debug)
+		if (LM_PARAMS.LM_DEBUG)
 			DEBUG_TEXT << "flip OK" << std::endl;
 	}
 
@@ -1223,7 +1228,7 @@ void LocoMouse::correctImage(cv::Mat& Iin, cv::Mat& Iout) {
 	CV_Assert(Iout.size() == CALIBRATION.size());
 
 	int max_dim;
-	if (debug) {
+	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << Iin.size() << std::endl;
 		DEBUG_TEXT << Iout.size() << std::endl;
 		DEBUG_TEXT << CALIBRATION.size() << std::endl;
@@ -1233,25 +1238,25 @@ void LocoMouse::correctImage(cv::Mat& Iin, cv::Mat& Iout) {
 
 	Iin.reshape(0, 1);
 
-	if (debug)
+	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "Iin is continuous: " << Iin.isContinuous() << std::endl;
 
 	uint N_cols = CALIBRATION.cols;
 	uint N_rows = CALIBRATION.rows;
 
 	if (Iout.isContinuous() & CALIBRATION.isContinuous()) {
-		if (debug)
+		if (LM_PARAMS.LM_DEBUG)
 			DEBUG_TEXT << "Continuous" << std::endl;
 
 		N_cols = N_cols * N_rows;
 		N_rows = 1;
 	}
 	else {
-		if (debug)
+		if (LM_PARAMS.LM_DEBUG)
 			DEBUG_TEXT << "Not continuous" << std::endl;
 	}
 
-	if (debug)
+	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << Iin.type() << " " << Iout.type() << " " << CALIBRATION.type() << std::endl;
 
 	uchar* p_Iin = Iin.ptr<uchar>(0);
@@ -1263,7 +1268,7 @@ void LocoMouse::correctImage(cv::Mat& Iin, cv::Mat& Iout) {
 
 		for (uint i_cols = 0; i_cols < N_cols; ++i_cols) {
 
-			if (debug) {
+			if (LM_PARAMS.LM_DEBUG) {
 				if (p_C[i_cols] >= max_dim) {
 					DEBUG_TEXT << "Mapping is: " << p_C[i_cols] << " while max dim is " << max_dim << std::endl;
 				}
@@ -1337,6 +1342,14 @@ void LocoMouse::computeMouseBoxSize(std::vector<double> &bb_w, std::vector<doubl
 	BB_bottom = cv::Rect(0, 0, final_w, final_hb);
 	return;
 }
+
+void LocoMouse::storePreviousImage() {
+
+	I_PAD.copyTo(I_PREV_PAD);
+
+	return;
+}
+
 
 double medianvec(std::vector<double> &v, const int N) {
 	//Computing median values
@@ -1428,6 +1441,8 @@ void vecmovingaverage(std::vector<double> &v, std::vector<unsigned int> &vout, i
 	for (int i_samples = v.size() - N_half_window - 1; i_samples < v.size(); ++i_samples) {
 		vout[i_samples] = (uint32_t)v[i_samples];
 	}
+
+	return;
 }
 
 vector<Candidate> nmsMax(const Mat& detection_box, Size box_size, double overlap) {
@@ -1610,7 +1625,7 @@ vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cl
 
 	int N_points = detections.size();
 
-	/*if (debug) {
+	/*if (LM_PARAMS.LM_DEBUG) {
 	DEBUG_TEXT << "Peak Clustering: " << N_points << " detections." << endl;
 	}*/
 
@@ -1691,7 +1706,7 @@ vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cl
 				cluster_scores[i_cluster] = current_cluster[i_cluster].score();
 			}
 
-			/*if (debug){
+			/*if (LM_PARAMS.LM_DEBUG){
 
 			cout << "Peak point: " << peak_point << endl;
 			cout << "sum_peak_score: " << sum_peak_score << endl;
@@ -1746,7 +1761,7 @@ MyMat LocoMouse::unaryCostBox(vector<Candidate> &p_candidates, Rect &BB, vector<
 
 		for (int j = 0; j < N_features; ++j) {
 			if (candidate.inside(location_prior[j].area())) {
-				if (debug) {
+				if (LM_PARAMS.LM_DEBUG) {
 					DEBUG_TEXT << "Location prior " << i << ": " << location_prior[j].position() << endl;
 				}
 
@@ -1754,7 +1769,7 @@ MyMat LocoMouse::unaryCostBox(vector<Candidate> &p_candidates, Rect &BB, vector<
 				Point_<double> distance = candidate - location_prior[j].position();
 				double val = sqrt(distance.dot(distance)) * norm_fact;
 
-				if (debug) {
+				if (LM_PARAMS.LM_DEBUG) {
 					DEBUG_TEXT << "val: " << val << " max_distance: " << location_prior[j].max_distance() << endl;
 				}
 
@@ -1764,6 +1779,7 @@ MyMat LocoMouse::unaryCostBox(vector<Candidate> &p_candidates, Rect &BB, vector<
 			}
 		}
 	}
+	
 	DEBUG_TEXT.close();
 	return M;
 }
@@ -2012,7 +2028,7 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 	//FIXME: Properly set the debug flag
 	bool debug = false;
 
-	if (debug) {
+	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT.open("debug_side_tracks.txt");
 	}
 
@@ -2031,7 +2047,7 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 
 	for (unsigned int i_feature = 0; i_feature < N_features; i_feature++) {
 
-		if (debug) {
+		if (LM_PARAMS.LM_DEBUG) {
 			DEBUG_TEXT << "Computing side view tracks for feature: " << i_feature << endl;
 		}
 
@@ -2058,7 +2074,7 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 			vector<uint> Z;
 			MyMat frame_potentials;
 
-			if (debug) {
+			if (LM_PARAMS.LM_DEBUG) {
 				DEBUG_TEXT << i_frames << endl;
 			}
 
@@ -2075,7 +2091,7 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 
 				}
 
-				if (debug)
+				if (LM_PARAMS.LM_DEBUG)
 					DEBUG_TEXT << "Pushed top candidates" << endl;
 
 			}
@@ -2083,7 +2099,7 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 				//There is no solution on the bottom view. Add occlusion grid points only.
 				frame_potentials = MyMat(0, 1);
 
-				if (debug)
+				if (LM_PARAMS.LM_DEBUG)
 					DEBUG_TEXT << "No top candidates" << endl;
 
 			}
@@ -2091,7 +2107,7 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 			//FIXME: Check types, its complaining.
 			unary_potential_side.push_back(frame_potentials);
 
-			if (debug)
+			if (LM_PARAMS.LM_DEBUG)
 				DEBUG_TEXT << "Pushed potentials" << endl;
 
 			if (i_frames > 0) {
@@ -2101,7 +2117,7 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 				MATSPARSE temp_matsparse = pairwisePotential_SideView(Z_prev, Z, (double)lowest_point, (double)LM_PARAMS.occlusion_grid_spacing_pixels, ONG_side, Nong_top, LM_PARAMS.max_displacement_top, LM_PARAMS.alpha_vel_top, LM_PARAMS.pairwise_occluded_cost);
 				pairwise_potential_side.push_back(temp_matsparse);
 
-				if (debug)
+				if (LM_PARAMS.LM_DEBUG)
 					DEBUG_TEXT << "Pushed pairwise potentials" << endl;
 
 			}
@@ -2112,16 +2128,14 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 		//Solve match2nd tracking for the current top view:
 		int a = 0;
 		int* porder = &a;
-		if (debug)
+		if (LM_PARAMS.LM_DEBUG)
 			DEBUG_TEXT << "Running match2nd on top view..." << endl;
-
-		//FIXME: Might be wrong depending on how the smart pointer is handeled.
 
 		cv::Mat temp = match2nd(unary_potential_side, pairwise_potential_side, Nong_top, 0, 0, N_FRAMES, 1, porder);
 
 		temp.copyTo(T_side.row(i_feature));
 
-		if (debug) {
+		if (LM_PARAMS.LM_DEBUG) {
 			DEBUG_TEXT << "Done" << endl;
 			DEBUG_TEXT.close();
 		}
@@ -2140,6 +2154,12 @@ void LocoMouse::exportResults() {
 
 	//Export Tail Tracks:
 	exportLineTracks(TRACKS_TAIL, "tracks_tail", LM_PARAMS.N_tail_points);
+
+	if (LM_PARAMS.LM_DEBUG) {
+
+		exportDebugVariables();
+
+	}
 
 	return;
 }
@@ -2312,15 +2332,7 @@ void LocoMouse::detectTail() {
 cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature F, const unsigned int N_line_points, cv::Mat& TAIL_MASK) {
 	//Tail detection using the detector and a connected components algorithm over the detection.
 
-	//FIXME: Implement proper debugging:
-	bool debug = false;
-	std::ofstream DEBUG_TEXT;
-	cv::FileStorage debug_locomouse;
-
-	if (debug) {
-		DEBUG_TEXT.open("debug_tail.txt");
-		debug_locomouse.open("debug_tail.yml", cv::FileStorage::WRITE);
-
+	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "------ detectTail ------" << endl;
 	}
 
@@ -2328,7 +2340,7 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature F, const unsigne
 	I_tail_bb_bottom_pad = I_BOTTOM_MOUSE_PAD(BB_BOTTOM_TAIL_PAD);
 	I_tail_bb_side_pad = I_SIDE_MOUSE_PAD(BB_SIDE_TAIL_PAD);
 
-	if (debug) {
+	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Cropping I_tail_pad done (both views)" << endl;
 	}
 
@@ -2337,23 +2349,23 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature F, const unsigne
 	cv::filter2D(I_tail_bb_bottom_pad, Filtered_tail_bottom_pad, CV_32F, F.detector_bottom(), Point(-1, -1), -F.rho_bottom(), BORDER_CONSTANT);
 	cv::filter2D(I_tail_bb_side_pad, Filtered_tail_side_pad, CV_32F, F.detector_side(), Point(-1, -1), -F.rho_side(), BORDER_CONSTANT);
 
-	if (debug) {
+	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Filtering tail done (both views)" << endl;
-		debug_locomouse << "Filtered_tail_bottom_pad" << Filtered_tail_bottom_pad;
-		debug_locomouse << "Filtered_tail_top_pad" << Filtered_tail_side_pad;
+		//debug_locomouse << "Filtered_tail_bottom_pad" << Filtered_tail_bottom_pad;
+		//debug_locomouse << "Filtered_tail_top_pad" << Filtered_tail_side_pad;
 	}
 
 	//Unpadding the tail image:
 	Filtered_tail_bottom = Filtered_tail_bottom_pad(BB_UNPAD_TAIL_BOTTOM);
 	Filtered_tail_side = Filtered_tail_side_pad(BB_UNPAD_TAIL_SIDE);
 
-	if (debug) {
+	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Unpadding filtering done (both views)." << endl;
 	}
 
 	//Converting to [0,1] range for binarization
 	cv::threshold(Filtered_tail_bottom, Filtered_tail_bottom, 0, 1, THRESH_BINARY);
-	cv::threshold(Filtered_tail_side, Filtered_tail_side, 0, 1, THRESH_BINARY); //FIXME: This step might not be needed.
+	cv::threshold(Filtered_tail_side, Filtered_tail_side, 0, 1, THRESH_BINARY);
 
 	//Image must be CV_8UC1 to perform the connected component analysis
 	cv::Mat Filtered_tail_bottom_binary;
@@ -2365,25 +2377,29 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature F, const unsigne
 	//Searching for the largest area object and considering it to be the tail
 	selectLargestRegion(Filtered_tail_bottom_binary, Filtered_tail_bottom_binary);
 
-	if (debug) {
+	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Select largest bottom region done." << endl;
 	}
 
 	//Mask for removing tail interference on bottom view paw tracking:
 	TAIL_MASK = Filtered_tail_bottom_binary;
-	//cv::Mat Filtered_tail_bottom_binary_reversed = (Filtered_tail_bottom_binary == 0);
-	//Filtered_tail_bottom_binary_reversed.convertTo(Filtered_tail_bottom, CV_32FC1); //Converting to double to multiply against filter results.
-	//normalize(Filtered_tail_bottom, Filtered_tail_bottom, 0, 1, NORM_MINMAX, CV_32FC1);
-
+	
 	//Masking the bottom region on the top view:
 	cv::Mat tail_bottom_x_location;
 	cv::reduce(Filtered_tail_bottom_binary, tail_bottom_x_location, 0, CV_REDUCE_MAX);
+
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "Filtered_tail_bottom_binary.size(): " << Filtered_tail_bottom_binary << std::endl;
+		DEBUG_TEXT << "tail_bottom_x_location.size(): " << tail_bottom_x_location << std::endl;
+		DEBUG_TEXT << "Filtered_tail_side.size(): " << Filtered_tail_side.size() << std::endl;
+	}
+
 	cv::Mat tail_mask_top = cv::repeat(tail_bottom_x_location, Filtered_tail_side.rows, 1);
 	cv::Mat Filtered_tail_top_binary = (Filtered_tail_side > 0) & tail_mask_top;
 
 	selectLargestRegion(Filtered_tail_top_binary, Filtered_tail_top_binary);
 
-	if (debug) {
+	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Select largest top region done." << endl;
 	}
 
@@ -2393,8 +2409,8 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature F, const unsigne
 
 	uchar* p_tail_bottom = tail_bottom_x_location.ptr<uchar>(0);
 
-	if (debug) {
-		debug_locomouse << "tail_bottom_x_location" << tail_bottom_x_location;
+	if (LM_PARAMS.LM_DEBUG) {
+		//debug_locomouse << "tail_bottom_x_location" << tail_bottom_x_location;
 	}
 
 	for (int i = 0; i < tail_bottom_x_location.cols; ++i) {
@@ -2405,13 +2421,13 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature F, const unsigne
 		}
 	}
 
-	if (debug) {
+	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "First point is: " << first_last[0] << " out of " << tail_bottom_x_location.cols << endl;
 	}
 
 	if (no_first) {
 
-		if (debug) {
+		if (LM_PARAMS.LM_DEBUG) {
 			DEBUG_TEXT << "No tail region found. Returning -1." << endl;
 		}
 
@@ -2427,7 +2443,7 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature F, const unsigne
 			}
 		}
 
-		if (debug) {
+		if (LM_PARAMS.LM_DEBUG) {
 			DEBUG_TEXT << "First and last: " << first_last[0] << " " << first_last[1] << endl;
 		}
 
@@ -2454,12 +2470,12 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature F, const unsigne
 			cv::Moments M;
 
 			//Tail bottom:
-			if (debug) {
+			if (LM_PARAMS.LM_DEBUG) {
 				DEBUG_TEXT << "--- Tail segments ---" << endl;
 			}
 			for (int i = 0; i < N_line_points; i++) {
 
-				if (debug) {
+				if (LM_PARAMS.LM_DEBUG) {
 					DEBUG_TEXT << "Filtered_tail_bottom_binary size: " << BB_tail_segment_bottom << endl;
 					DEBUG_TEXT << "bb_tail_segment_bottom_width: " << bb_tail_segment_bottom_width[i] << endl;
 				}
@@ -2468,7 +2484,7 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature F, const unsigne
 
 				Itail_segment = Filtered_tail_bottom_binary(BB_tail_segment_bottom);
 
-				if (debug) {
+				if (LM_PARAMS.LM_DEBUG) {
 					DEBUG_TEXT << "Crop segment done." << endl;
 				}
 
@@ -2520,9 +2536,158 @@ void LocoMouse::selectLargestRegion(const cv::Mat &Iin, cv::Mat &Iout) {
 	else {
 		Iout = cv::Mat::zeros(Iin.size(), CV_8UC1);
 	}
+
+	return;
 }
 
+void LocoMouse::exportDebugVariables() {
+	//FIXME: Make a sub function for each and every object
 
+	DEBUG_OUTPUT = cv::FileStorage(debug_file, cv::FileStorage::WRITE);
+
+	if (!DEBUG_OUTPUT.isOpened()) {
+		throw std::runtime_error(Stream_Formatter() << "Could not create debug file: " << debug_file << "\n");
+	}
+
+	//FIXME: The current code to read YAML files do not support opencv-matrices. For now all opencv-matrices must be written first and outside any list or higher order structure. A integer with the actual number of opencv matrices must be passed.
+	DEBUG_OUTPUT << "N_opencv_matrices" << 7;
+
+	//Writing the results from match2nd:
+	DEBUG_OUTPUT << "M_paw_bottom" << TRACK_INDEX_PAW_BOTTOM;
+	DEBUG_OUTPUT << "M_snout_bottom" << TRACK_INDEX_SNOUT_BOTTOM;
+
+	string m_paw_side = "M_paw_side_";
+	
+
+	for (unsigned int i_paws = 0; i_paws < LM_PARAMS.N_paws; i_paws++) {
+
+		stringstream s;
+		s << m_paw_side << i_paws;
+		string temp;
+		s >> temp;
+		DEBUG_OUTPUT << temp << TRACK_INDEX_PAW_SIDE.row(1);
+
+	}
+
+	string m_snout_side = "M_snout_side_";
+
+	for (uint i_paws = 0; i_paws < LM_PARAMS.N_snout; i_paws++) {
+
+		stringstream s;
+		s << m_snout_side << i_paws;
+		string temp;
+		s >> temp;
+		DEBUG_OUTPUT << temp << TRACK_INDEX_SNOUT_SIDE.row(1);
+	}
+
+
+	//Writing the number of frames:
+	DEBUG_OUTPUT << "N_frames" << (int) N_FRAMES;
+
+	//Occluded distance:
+	DEBUG_OUTPUT << "occluded_distance" << LM_PARAMS.max_displacement;
+
+	//Writing the BBs:
+	DEBUG_OUTPUT << "BB_top" << "{" << "x" << BB_SIDE_MOUSE.x << "y" << BB_SIDE_MOUSE.y << "width" << BB_SIDE_MOUSE.width << "height" << BB_SIDE_MOUSE.height << "}";
+
+	DEBUG_OUTPUT << "BB_bottom" << "{" << "x" << BB_BOTTOM_MOUSE.x << "y" << BB_BOTTOM_MOUSE.y << "width" << BB_BOTTOM_MOUSE.width << "height" << BB_BOTTOM_MOUSE.height << "}";
+
+	//Writing the BB positions:
+	DEBUG_OUTPUT << "bb_x_avg" << "[:";
+	for (uint i = 0; i < N_FRAMES; i++) {
+		DEBUG_OUTPUT << (int) BB_X_POS[i];
+	}
+	DEBUG_OUTPUT << "]";
+
+	//Writing the BB positions:
+	DEBUG_OUTPUT << "bb_yt_avg" << "[:";
+	for (uint i = 0; i < N_FRAMES; i++) {
+		DEBUG_OUTPUT << (int) BB_Y_SIDE_POS[i];
+	}
+	DEBUG_OUTPUT << "]";
+
+	//Writing the BB positions:
+	DEBUG_OUTPUT << "bb_yb_avg" << "[:";
+	for (uint i = 0; i < N_FRAMES; i++) {
+		DEBUG_OUTPUT << (int) BB_Y_BOTTOM_POS[i];
+	}
+	DEBUG_OUTPUT << "]";
+
+	//Writing the ONG points:
+	DEBUG_OUTPUT << "ONG" << "{";
+	DEBUG_OUTPUT << "points" << (int) ONG.size();
+	DEBUG_OUTPUT << "x_y_coordinates" << "[:";
+	//ONG have to be exported in an order that reflects their index on M:
+	//NOTE: Unfortunately ONG_size was was defined as Size ONG_size(ngrid_x, ngrid_y); so width and height are a bit confusing. FIXME.
+
+	for (unsigned int i = 0; i < ONG.size(); i++) {
+		DEBUG_OUTPUT << ONG[i].x << ONG[i].y;
+	}
+	DEBUG_OUTPUT << "]" << "}";
+
+	//Writing the ONG_top points:
+	DEBUG_OUTPUT << "ONG_top" << "{";
+	DEBUG_OUTPUT << "points" << (int) ONG_SIDE.size();
+	DEBUG_OUTPUT << "z_coordinates" << "[:";
+	
+	for (unsigned int i = 0; i < ONG_SIDE.size(); i++) {
+		DEBUG_OUTPUT << (int)ONG_SIDE[i];
+	}
+	DEBUG_OUTPUT << "]" << "}";
+
+	//Writing the candidates for the paw:
+	DEBUG_OUTPUT << "candidates_paw_bottom_top_matched" << "[";
+	for (uint i = 0; i < N_FRAMES; i++) {
+		DEBUG_OUTPUT << "[";
+		for (uint j = 0; j < CANDIDATES_MATCHED_VIEWS_PAW[i].size(); j++) {
+			DEBUG_OUTPUT << CANDIDATES_MATCHED_VIEWS_PAW[i][j];
+		}
+		DEBUG_OUTPUT << "]";
+	}
+	DEBUG_OUTPUT << "]";
+
+	//Writing the candidates for the snout:
+	DEBUG_OUTPUT << "candidates_snout_bottom_top_matched" << "[";
+	for (uint i = 0; i < N_FRAMES; i++) {
+		DEBUG_OUTPUT << "[";
+
+		for (uint j = 0; j < CANDIDATES_MATCHED_VIEWS_SNOUT[i].size(); j++) {
+			DEBUG_OUTPUT << CANDIDATES_MATCHED_VIEWS_SNOUT[i][j];
+		}
+		DEBUG_OUTPUT << "]";
+	}
+	DEBUG_OUTPUT << "]";
+
+	//Writing the pairwise transitions for the paws:
+	DEBUG_OUTPUT << "Pairwise_paws" << "[";
+	for (uint i = 0; i < N_FRAMES - 1; i++) {
+		DEBUG_OUTPUT << PAIRWISE_BOTTOM_PAW[i];
+	}
+	DEBUG_OUTPUT << "]";
+
+	DEBUG_OUTPUT << "Pairwise_snout" << "[";
+	for (uint i = 0; i < N_FRAMES - 1; i++) {
+		DEBUG_OUTPUT << PAIRWISE_BOTTOM_SNOUT[i];
+	}
+
+	DEBUG_OUTPUT << "]";
+
+	DEBUG_OUTPUT << "Unary_paws" << "[";
+	for (uint i = 0; i < N_FRAMES; i++) {
+		DEBUG_OUTPUT << UNARY_BOTTOM_PAW[i];
+	}
+	DEBUG_OUTPUT << "]";
+
+	DEBUG_OUTPUT << "Unary_snout" << "[";
+	for (uint i = 0; i < N_FRAMES; i++) {
+		DEBUG_OUTPUT << UNARY_BOTTOM_SNOUT[i];
+	}
+	DEBUG_OUTPUT << "]";
+
+	DEBUG_OUTPUT.release();
+
+	return;
+}
 
 
 unsigned int LocoMouse::N_frames() const {

@@ -75,6 +75,8 @@ public:
 	std::string REF_PATH = "./";
 	bool LM_DEBUG = false;
 	int LM_FRAME_TO_DEBUG = -1;
+	int LM_N_FRAMES_TO_DEBUG = -1;
+	bool LM_VISUAL_DEBUG = false;
 
 	//Default to the System:
 	const unsigned int N_paws = 4;
@@ -145,7 +147,6 @@ class LocoMouse_Model {
 public:
 	LocoMouse_Feature paw, snout, tail;
 	cv::Size spre_b, spre_t, spost_b, spost_t;
-	int loadOK; //=1 Does not work on linux. Probably I'm not setting the compiler to c++11
 
 	LocoMouse_Model(); //Default constructor.
 	~LocoMouse_Model(); //Default destructor.
@@ -163,7 +164,7 @@ public:
 
 class LocoMouse {
 
-public:
+private:
 
 	LocoMouse_Parameters LM_PARAMS;
 
@@ -195,9 +196,9 @@ public:
 	std::vector< unsigned int> BB_X_POS, BB_Y_SIDE_POS, BB_Y_BOTTOM_POS;
 
 	//Image size, Video size, Padding sizes:
-	unsigned int N_FRAMES, CURRENT_FRAME = 0, N_FRAMES_DEBUG = 0;
+	unsigned int N_FRAMES;
 	unsigned int N_ROWS, N_COLS;
-	int PAD_PRE_ROWS, PAD_PRE_COLS, PAD_POST_ROWS, PAD_POST_COLS; //For implementation reasons they are set to int.
+	int CURRENT_FRAME = -1, PAD_PRE_ROWS, PAD_PRE_COLS, PAD_POST_ROWS, PAD_POST_COLS; //For implementation reasons they are set to int.
 	
 	//Occlusion Grid Parameters;
 	cv::Point_<double> ONG_BR_corner;
@@ -282,8 +283,9 @@ public:
 
 	cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature F, const unsigned int N_line_points, cv::Mat & Mask);
 
+	void exportDebugVariables();
 
-//public:
+public:
 	
 	
 	//Constructors:
@@ -315,6 +317,8 @@ public:
 	
 	void matchBottomSideCandidates(); //Matches Side view candidates to Bottom view candidates.
 
+	void storePreviousImage(); //Copies the current frame to be used on the next step;
+
 	void computeBottomTracks(); //Computes the final trajectories for the bottom view.
 
 	void computeSideTracks(); //Computes the best bottom view tracks based on the side view tracks.
@@ -324,7 +328,6 @@ public:
 	void exportFeatureTracks();
 
 	void exportResults();
-	
 
 	//Getters:
 	unsigned int N_frames() const;
@@ -415,9 +418,8 @@ private:
 };
 
 //Auxiliary functions:
-void firstLastOverT(const cv::Mat& values, const uint L, uint32_t first_last[2], const uint T);
-
-
+template <typename T>
+void firstLastOverT(const cv::Mat& values, const unsigned int L, T first_last[2], const T th);
 
 
 #endif
