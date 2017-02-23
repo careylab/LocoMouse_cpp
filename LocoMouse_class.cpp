@@ -147,48 +147,29 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 	double* Wptr = W.ptr<double>(N_paws);
 	PRIOR_SNOUT.push_back(LocoMouse_LocationPrior(Wptr[0], Wptr[1], Wptr[2], Wptr[3], Wptr[4], Wptr[5], Wptr[6]));
 
-	config_file["use_reference_image"] >> use_reference_image;
+	config_file["use_reference_image_brightness"] >> use_reference_image;
+	
+	if (use_reference_image) {
+		
+		std::string ref_name;
+		config_file["reference_image_path"] >> ref_name;
+		std::string ref_image_path = REF_PATH + "/" + ref_name;
+		
+		cv::Mat Iref = cv::imread(ref_image_path);
+		if (!Iref.data) {
+			//FIXME: Return proper exception.
+			std::cout << "Failed to read reference image." << std::endl;
+		}
+		
+		computeNormalizedCDF(Iref, REF_CDF);
+	}
 
-	//FIXME: Check what is the best way to define the reference image/histogram given that it comes from different methods.
-	/*if (use_reference_image) {
+	if (use_reference_image) {
 
 		std::string ref_name;
 		config_file["reference_image_path"] >> ref_name;
 
-		std::string ref_image_path = REF_PATH + "/" + ref_name;
-
-		cv::Mat Iref = cv::imread(ref_image_path);
-		if (!Iref.data) {
-			std::cout << "Failed to read reference image." << std::endl;
-			//return -18;
-		}
-
-		//Computing the normalized histogram:
-		cv::Mat hist;
-		int channels[] = { 0 };
-		int histSize[] = { 256 };
-		float range[] = { 0, 256 };
-		const float* ranges[] = { range };
-
-		calcHist(&Iref, 1, channels, cv::Mat(), // do not use mask
-			hist, 1, histSize, ranges,
-			true, // the histogram is uniform
-			false);
-
-		hist = hist / (Iref.cols*Iref.rows);
-
-		//Computing the CDF:
-		//FIXME: Find a better way of checking this: CV_Assert(reference_cdf.rows == 1);
-		float* pcumsum = reference_cdf.ptr<float>(0);
-
-		pcumsum[0] = hist.at<float>(0);
-		for (int i = 1; i < reference_cdf.cols; i++) {
-			pcumsum[i] = pcumsum[i - 1] + hist.at<float>(i);
-		}
-
-		std::cout << std::endl;
-
-	}*/
+	}
 
 	config_file["use_provided_bounding_box"] >> user_provided_bb;
 
@@ -273,6 +254,7 @@ LocoMouse_Parameters& LocoMouse_Parameters::operator=(LocoMouse_Parameters &&oth
 	LM_FRAME_TO_DEBUG = other.LM_FRAME_TO_DEBUG;
 	LM_N_FRAMES_TO_DEBUG = other.LM_N_FRAMES_TO_DEBUG;
 	LM_VISUAL_DEBUG = other.LM_VISUAL_DEBUG;
+	REF_CDF = other.REF_CDF;
 
 	for (unsigned int i_paws = 0; i_paws < N_paws; ++i_paws) {
 		PRIOR_PAW.push_back(other.PRIOR_PAW[i_paws]);
@@ -738,12 +720,19 @@ void LocoMouse::detectBottomCandidates() {
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "=== detectBottomCandidateS(): " << std::endl;
+		DEBUG_TEXT << "BB_BOTTOM_TAIL: " << BB_BOTTOM_TAIL.size() << std::endl;
+		DEBUG_TEXT << "I_BOTTOM_MOUSE: " << I_BOTTOM_MOUSE.size() << std::endl;
 	}
 
 	//Masking the mouse:
 	cv::Mat I_bb_bottom_mask;
 	threshold(I_BOTTOM_MOUSE, I_bb_bottom_mask, 25.5, 255, cv::THRESH_BINARY_INV); //Threshold at 0.1 on [0 1] range.
 	I_bb_bottom_mask(BB_BOTTOM_TAIL).setTo(255, TAIL_MASK); //Setting tail area to 0.
+
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "Masked the tail." << std::endl;
+	}
+
 
 	//Detecting Paw Candidates:
 	CANDIDATES_BOTTOM_PAW.push_back(detectPointCandidatesBottom(I_BOTTOM_MOUSE_PAD, BB_UNPAD_MOUSE_BOTTOM, M.paw, I_bb_bottom_mask));
@@ -1254,7 +1243,7 @@ void LocoMouse::readFrame(cv::Mat &I) {
 
 	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "Normalized input image range." << std::endl;
-
+	
 	//Undistorting the image:
 	correctImage(F, I);
 
@@ -1373,6 +1362,11 @@ void LocoMouse::cropBoundingBox() {
 
 	I_BOTTOM_MOUSE_PAD = I_PAD(BB_BOTTOM_MOUSE_PAD);
 	I_BOTTOM_MOUSE = I_BOTTOM_MOUSE_PAD(BB_UNPAD_MOUSE_BOTTOM);
+
+	if (LM_PARAMS.use_reference_image) {
+		histogramMatching(I_BOTTOM_MOUSE, LM_PARAMS.REF_CDF);
+	}
+
 
 	BB_SIDE_MOUSE_PAD.x = (PAD_PRE_COLS + BB_X_POS[CURRENT_FRAME]) - (BB_SIDE_MOUSE_PAD.width - M.size_post_side().width) + 1;
 	BB_SIDE_MOUSE_PAD.y = (PAD_PRE_ROWS + BB_Y_SIDE_POS[CURRENT_FRAME]) - (BB_SIDE_MOUSE_PAD.height - M.size_post_side().height) + 1;
@@ -3101,4 +3095,210 @@ T matchToRange(T input, T min_val, T max_val) {
 	}
 
 	return input;
+}
+
+void LocoMouse::imadjust(const cv::Mat &Iin, cv::Mat &Iout, double low_in, double high_in, double low_out, double high_out) {
+	//Similar to MALTAB's imadjust. Maps intensity values on the range [low_in high_in] to [low_out high_out]
+
+	CV_Assert(Iin.type() == CV_8U);
+	CV_Assert(Iout.type() == CV_8U);
+	CV_Assert((low_in >= 0) & (low_in <= 1));
+	CV_Assert((high_in > low_in) & (high_in <= 1));
+	CV_Assert((low_out >= 0) & (low_out <= 1));
+	CV_Assert((high_out > low_out) & (high_out <= 1));
+
+	low_in = low_in * 255;
+	high_in = high_in * 255;
+	low_out = low_out * 255;
+	high_out = high_out * 255;
+
+	double range_in = high_in - low_in;
+	double range_out = high_out - low_out;
+	double range_div = range_out / range_in;
+
+	cv::Mat lookupTable = cv::Mat(1, 256, CV_8UC1);
+	uchar* pL = lookupTable.ptr<uchar>(0);
+	double temp;
+	for (int i = 0; i < 256; ++i) {
+
+		if (i <= low_in) {
+			temp = 0;
+		}
+		else if (i >= high_in) {
+			temp = range_out;
+		}
+		else {
+			temp = (i - low_in)*(range_div);
+		}
+
+		pL[i] = (uchar)round((temp + low_out)); //MATLAB uint8 conversion rounds.
+	}
+
+	LUT(Iin, lookupTable, Iout);
+}
+
+void LocoMouse::imadjust_default(const cv::Mat &Iin, cv::Mat &Iout) {
+	//Imadjust with MATLAB's default parameters.
+	CV_Assert(Iin.type() == CV_8U);
+	CV_Assert(Iout.type() == CV_8U);
+
+	//------------- Computing the mapping
+	const int N_bins = 256; //Assuming Grayscale.
+	float min_tol = 0.01; //On each side of the spectrum.
+	float max_tol = 0.99;
+
+	float range[] = { 0,256 };
+	const float* histRange = { range };
+
+	cv::Mat hist;
+
+	calcHist(&Iin, 1, 0, cv::Mat(), hist, 1, &N_bins, &histRange); //hists come out as floats apparently.
+
+	Scalar sum_hist = sum(hist);
+	float sum_histf = sum_hist(0);
+	float cumsum_normalized;
+	float cumsum_step = 0;
+	float* phist = hist.ptr<float>(0);
+
+	float ranges[] = { 0,0 };
+	int indices[] = { 0,0 };
+
+	bool check_min = true;
+	bool check_max = true;
+
+	int imin = 0, imax = 0;
+
+	for (int i_h = 0; i_h < N_bins; i_h++) {
+		cumsum_step += phist[i_h];
+		cumsum_normalized = cumsum_step / sum_histf;
+
+		if ((cumsum_normalized > min_tol) & check_min) {
+			indices[0] = i_h;
+			check_min = false;
+			imin = i_h;
+		}
+
+		if ((cumsum_normalized >= max_tol) & check_max) {
+			indices[1] = i_h;
+			check_max = false;
+			imax = i_h;
+		}
+
+		if (!(check_min || check_max)) {
+			break;
+		}
+
+	}
+
+	if (imin == imax) {
+		indices[1] = N_bins;
+	}
+	ranges[0] = (float)indices[0] / (float)(N_bins - 1);
+	ranges[1] = (float)indices[1] / (float)(N_bins - 1);
+	//--------------- Applying the mapping:
+	if (Iin.data == Iout.data) {
+		Iout = (Iout - ranges[0]) / (ranges[1] - ranges[0]);
+	}
+	else {
+		cv::Mat Itemp;
+		Itemp = (Iin - ranges[0]) / (ranges[1] - ranges[0]); //I believe this is supposed to be with integer division.
+		Itemp.copyTo(Iout);
+	}
+}
+
+void histogramMatching(cv::Mat &I, const cv::Mat& cumsum_ref) {
+	//Based on the normalized CDF of a reference image, transform the gray values of I to match the histogram of that reference image.
+	// Assumes both histograms are computed with 256 bins and the reference histogram is normalized.
+
+	bool debug = false; //FIXME: Implement proper debug flags.
+
+	cv::Mat hist;
+	int channels[] = { 0 };
+	int histSize[] = { 256 };
+	float range[] = { 0, 256 };
+	const float* ranges[] = { range };
+
+	calcHist(&I, 1, channels, cv::Mat(), // do not use mask
+		hist, 1, histSize, ranges,
+		true, // the histogram is uniform
+		false);
+	
+	hist = hist / (I.cols*I.rows);
+
+	cv::Mat Icumsum = cv::Mat::zeros(1, 256, hist.type());
+	float* pIcumsum = Icumsum.ptr<float>(0);
+	const float* pRefcumsum = cumsum_ref.ptr<float>(0);
+
+	//It seems hist is column-wise which can have problems if we assume its continuous. Better access with .at
+	pIcumsum[0] = hist.at<float>(0);
+	for (int i = 1; i < 256; ++i) {
+		pIcumsum[i] = pIcumsum[i - 1] + hist.at<float>(i);
+	}
+	
+	cv::Mat lookupTable = cv::Mat::zeros(1, 256, CV_8UC1);
+	uchar* pLT = lookupTable.ptr<uchar>(0);
+
+	int current_j_init = 0;
+	for (int i = 0; i < 256; ++i) {
+		bool assigned = false;
+		for (int j = current_j_init; j < 256; ++j) {
+			if (debug) {
+				cout << pRefcumsum[j] << endl;
+			}
+			if (pRefcumsum[j] >= pIcumsum[i]) {
+				pLT[i] = (uchar)j;
+				current_j_init = j;
+				assigned = true;
+				break;
+			}
+		}
+
+		//Due to numerical issues it can happen that pIcumsum[i] is greater than all pRefcumsum even though they are all normalized.
+		//FIXME: Matlab creates a dynamic tolerance based on the difference between two histogram levels. Here we just go for the simple algorithm.
+		if (!assigned) {
+			float min_diff = 1;
+			float curr_diff = 0;
+			for (int j = current_j_init; j < 256; ++j) {
+				curr_diff = pIcumsum[i] - pRefcumsum[j];
+				if (curr_diff < min_diff) {
+					min_diff = curr_diff;
+					current_j_init = j;
+				}
+			}
+			pLT[i] = (uchar)current_j_init;
+		}
+	}
+
+	if (debug) {
+		cout << "LUT: " << lookupTable << endl;
+	}
+	LUT(I, lookupTable, I);
+	return;
+}
+
+void computeNormalizedCDF(const cv::Mat &Iin, cv::Mat &CDF) {
+
+	//Computing the normalized histogram:
+	cv::Mat hist;
+	int channels[] = { 0 };
+	int histSize[] = { 256 };
+	float range[] = { 0, 256 };
+	const float* ranges[] = { range };
+
+	calcHist(&Iin, 1, channels, cv::Mat(), // do not use mask
+		hist, 1, histSize, ranges,
+		true, // the histogram is uniform
+		false);
+
+	hist = hist / (Iin.cols*Iin.rows);
+
+	//Computing the CDF:
+	//FIXME: Find a better way of checking this: CV_Assert(reference_cdf.rows == 1);
+	float* pcumsum = CDF.ptr<float>(0);
+
+	pcumsum[0] = hist.at<float>(0);
+	for (int i = 1; i < CDF.cols; i++) {
+		pcumsum[i] = pcumsum[i - 1] + hist.at<float>(i);
+	}
+
 }

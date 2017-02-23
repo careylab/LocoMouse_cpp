@@ -27,6 +27,7 @@
 
 //FIXME: New classes merge with other classes
 #include "LocoMouse_class.hpp"
+#include "LocoMouse_Methods.hpp"
 
 int main(int argc, char* argv[]) {
 	double t = (double) getTickCount();
@@ -34,7 +35,7 @@ int main(int argc, char* argv[]) {
 	try {
 
 		//Initialize LocoMouse problem
-		LocoMouse L(argc, argv);
+		LocoMouse_TM L(argc, argv);
 
 		//Compute Bounding Box location accross video:
 		L.computeBoundingBox();

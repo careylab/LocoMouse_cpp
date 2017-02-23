@@ -88,6 +88,7 @@ public:
 	//Matrix with the permutations for the paws:
 	const unsigned int N_PAW_PERMUTATIONS = 24;
 	const cv::Mat PAW_PERMUTATIONS = (cv::Mat_<int>(4, N_PAW_PERMUTATIONS) << 3, 2, 1, 0, 3, 2, 0, 1, 3, 1, 2, 0, 3, 1, 0, 2, 3, 0, 1, 2, 3, 0, 2, 1, 2, 3, 1, 0, 2, 3, 0, 1, 2, 1, 3, 0, 2, 1, 0, 3, 2, 0, 1, 3, 2, 0, 3, 1, 1, 2, 3, 0, 1, 2, 0, 3, 1, 3, 2, 0, 1, 3, 0, 2, 1, 0, 3, 2, 1, 0, 2, 3, 0, 2, 1, 3, 0, 2, 3, 1, 0, 1, 2, 3, 0, 1, 3, 2, 0, 3, 1, 2, 0, 3, 2, 1);
+	cv::Mat REF_CDF = cv::Mat::zeros(1, 256, CV_32FC1); //Matrix used to store the normalized CDF from a reference image.
 
 	//Constructors:
 	LocoMouse_Parameters();
@@ -164,7 +165,7 @@ public:
 
 class LocoMouse {
 
-private:
+protected:
 
 	LocoMouse_Parameters LM_PARAMS;
 
@@ -179,7 +180,6 @@ private:
 	cv::VideoCapture V;
 	cv::Mat I_PAD, I, I_PREV_PAD, BKG;
 	cv::Mat CALIBRATION, CALIBRATION_INV;
-	cv::Mat H; //FIXME: As H is not needed for every method, should it be a method specific parameter?
 	cv::Mat I_BOTTOM_MOUSE_PAD, I_BOTTOM_MOUSE, I_SIDE_MOUSE_PAD, I_SIDE_MOUSE, I_BOTTOM_MOUSE_PAD_PREV, I_SIDE_MOUSE_PAD_PREV;
 	cv::Mat DETECTION_SCORES_PAW_BOTTOM, DETECTION_SCORES_PAW_SIDE, DETECTION_SCORES_SNOUT_BOTTOM, DETECTION_SOCRES_SNOUT_SIDE;
 	cv::Mat TAIL_MASK;
@@ -329,6 +329,10 @@ public:
 
 	void exportResults();
 
+	void imadjust(const cv::Mat &Iin, cv::Mat &Iout, double low_in, double high_in, double low_out, double high_out);
+
+	void imadjust_default(const cv::Mat &Iin, cv::Mat &Iout);
+
 	//Getters:
 	unsigned int N_frames() const;
 };
@@ -339,6 +343,8 @@ double stdvec(std::vector<double> &v, int N);
 
 void vecmovingaverage(std::vector<double> &v, std::vector<unsigned int> &vout, int N_window);
 
+void histogramMatching(cv::Mat &Iin, const cv::Mat &reference_cdf);
+
 vector<Candidate> nmsMax(const cv::Mat& detection_box, Size box_size, double overlap);
 
 vector<Candidate> peakClustering(const cv::Mat& detection_box, Size box_size, int cluster_method, double overlap, bool debug);
@@ -346,46 +352,7 @@ vector<Candidate> peakClustering(const cv::Mat& detection_box, Size box_size, in
 template <typename T>
 T matchToRange(T input, T min_val, T max_val);
 
-
-//----- Rect3D:
-// This class stores a 3D bounding box as 2 cv::Rects
-
-//template <class T>
-//class Rect3D {
-//	
-//public:
-//	T x = 0, y_side = 0, y_bottom = 0, width = 0, height_side = 0, height_bottom = 0;
-//	cv::Rect Rect_side();
-//	cv::Rect Rect_bottom();
-//
-//};
-//
-//template <class T>
-//class LocoMouse_BoxesPerFrame {
-//
-//public:
-//
-//	std::vector<T> x, y_side, y_bottom, width, height_side, heigt_bottom;
-//	
-//	LocoMouse_BoxesPerFrame();
-//	~LocoMouse_BoxesPerFrame();
-//
-//};
-
-
-//template <class my_template_class>;
-//
-//class Rect3D {
-//	
-//public:
-//	
-//	typename my_template_class x =0, y_side = 0, y_bottom = 0, width = 0, height_side = 0, height_bottom = 0;
-//	
-//	cv::Rect Rect_side();
-//	cv::Rect Rect_bottom();
-//
-//};
-
+void computeNormalizedCDF(const cv::Mat &Iin, cv::Mat &CDF);
 
 //FIXME: Example copied from http://stackoverflow.com/questions/12261915/howto-throw-stdexceptions-with-variable-messages to better handle exception messages.
 class Stream_Formatter
