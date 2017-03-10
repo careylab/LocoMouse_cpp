@@ -19,6 +19,8 @@
 #include <functional>
 #include <map>
 #include <exception>
+#include <memory>
+
 
 //LocoMouse includes:
 #include "MyMat.hpp"
@@ -34,57 +36,58 @@ int main(int argc, char* argv[]) {
 
 	try {
 
+		//Parsing the inputs:
+		LocoMouse_ParseInputs inputs = LocoMouse_ParseInputs(argc, argv);
+		
 		//Initialize LocoMouse problem
-		LocoMouse_TM L(argc, argv);
+		std::unique_ptr<LocoMouse> L = LocoMouse_Initialize(inputs);
 
 		//Compute Bounding Box location accross video:
-		L.computeBoundingBox();
-		//debug_text << "Bounding box computed" << std::endl;
+		L->computeBoundingBox();
 
-		L.initializeFeatureLoop();
-		//debug_text << "Initialized feature loop " << std::endl;
+		L->initializeFeatureLoop();
 
 
 		//Compute per-frame candidate locations:
-		for (unsigned int i_frames = 0; i_frames < L.N_frames(); ++i_frames) {
+		for (unsigned int i_frames = 0; i_frames < L->N_frames(); ++i_frames) {
 			//debug_text << "Current frame: " << i_frames << std::endl;
 			
 			//Read new image:
-			L.readFrame();
+			L->readFrame();
 		
 			//Crop image bounding boxes for both views:
-			L.cropBoundingBox();
+			L->cropBoundingBox();
 
 			// --- Detecting the Tail:
-			L.detectTail();
+			L->detectTail();
 			
 			// --- Detecting Paw + Snout candidates for bottom view:
-			L.detectBottomCandidates();
+			L->detectBottomCandidates();
 			
 			// --- Computing Unary costs based on Location Prior:
-			L.computeUnaryCostsBottom();
+			L->computeUnaryCostsBottom();
 
 			// --- Computing Pairwise costs (Displacement between frames):
-			L.computePairwiseCostsBottom();
+			L->computePairwiseCostsBottom();
 
 			// --- Detecting Paw + Snout candidates for side view:
-			L.detectSideCandidates();
+			L->detectSideCandidates();
 			
 			// --- Matching 
-			L.matchBottomSideCandidates();
+			L->matchBottomSideCandidates();
 
-			L.storePreviousImage();
+			L->storePreviousImage();
 
 		}
 
 		//--- Paws + Snout tracks:
-		L.computeBottomTracks();
+		L->computeBottomTracks();
 
 		//Estimate corresponding Z coordinates:
-		L.computeSideTracks();
+		L->computeSideTracks();
 
 		//--- Export results:
-		L.exportResults();
+		L->exportResults();
 
 	}
 	catch (std::invalid_argument e) {
@@ -94,8 +97,6 @@ int main(int argc, char* argv[]) {
 		std::cout << "Runtime Error: " << e.what() << std::endl;
 	}
 
-	//debug_text.close();
-	//debug_locomouse.release();
 	t = ((double)getTickCount() - t) / getTickFrequency();
 	std::cout << "Total Elapsed time: " << t << "s" << std::endl;
 	return EXIT_SUCCESS;

@@ -22,8 +22,10 @@
 #include <numeric>
 #include <functional>
 #include <map>
+#include <memory>
 
 //LocoMouse Dependencies:
+#include "LocoMouse_ParseInputs.hpp"
 #include "Candidates.hpp"
 #include "MyMat.hpp"
 #include "match2nd.h"
@@ -69,6 +71,7 @@ public:
 	
 	int mode_int = 0;
 	int use_reference_image = 0;
+	int transform_gray_values = 0;
 	int user_provided_bb = 0;
 
 	//To read from inputs:
@@ -88,7 +91,7 @@ public:
 	//Matrix with the permutations for the paws:
 	const unsigned int N_PAW_PERMUTATIONS = 24;
 	const cv::Mat PAW_PERMUTATIONS = (cv::Mat_<int>(4, N_PAW_PERMUTATIONS) << 3, 2, 1, 0, 3, 2, 0, 1, 3, 1, 2, 0, 3, 1, 0, 2, 3, 0, 1, 2, 3, 0, 2, 1, 2, 3, 1, 0, 2, 3, 0, 1, 2, 1, 3, 0, 2, 1, 0, 3, 2, 0, 1, 3, 2, 0, 3, 1, 1, 2, 3, 0, 1, 2, 0, 3, 1, 3, 2, 0, 1, 3, 0, 2, 1, 0, 3, 2, 1, 0, 2, 3, 0, 2, 1, 3, 0, 2, 3, 1, 0, 1, 2, 3, 0, 1, 3, 2, 0, 3, 1, 2, 0, 3, 2, 1);
-	cv::Mat REF_CDF = cv::Mat::zeros(1, 256, CV_32FC1); //Matrix used to store the normalized CDF from a reference image.
+	cv::Mat REF_CDF_GLT = cv::Mat::zeros(1, 256, CV_32FC1); //Matrix used to store the normalized CDF or the Gray Level transformation.
 
 	//Constructors:
 	LocoMouse_Parameters();
@@ -198,7 +201,7 @@ protected:
 	//Image size, Video size, Padding sizes:
 	unsigned int N_FRAMES;
 	unsigned int N_ROWS, N_COLS;
-	int CURRENT_FRAME = -1, PAD_PRE_ROWS, PAD_PRE_COLS, PAD_POST_ROWS, PAD_POST_COLS; //For implementation reasons they are set to int.
+	int CURRENT_FRAME = -1, PAD_PRE_ROWS, PAD_PRE_COLS, PAD_POST_ROWS, PAD_POST_COLS, METHOD = 0; //For implementation reasons they are set to int.
 	
 	//Occlusion Grid Parameters;
 	cv::Point_<double> ONG_BR_corner;
@@ -232,7 +235,9 @@ protected:
 	
 	vector<cv::Mat> TRACKS_TAIL;
 
-	//Private methods
+	//Protected methods
+	void initializePaths(LocoMouse_ParseInputs INPUT);
+	
 	void loadVideo();
 
 	void loadBackground();
@@ -285,21 +290,23 @@ protected:
 
 	void exportDebugVariables();
 
+
+
 public:
 	
 	
 	//Constructors:
-	LocoMouse(int argc, char* argv[]);
+	LocoMouse(LocoMouse_ParseInputs INPUTS);
 		
 	//Destructor
 	//~LocoMouse();
 	
 	//Methods:
-	void readFrame(); //Reads and processes next frame into I
+	virtual void readFrame(); //Reads and processes next frame into I
 	
 	void readFrame(cv::Mat& I); //Reads and processes next frame into provided matrix.
 
-	void computeBoundingBox(); //Computes mouse position and bounding box along the video
+	virtual void computeBoundingBox(); //Computes mouse position and bounding box along the video
 	
 	void initializeFeatureLoop(); //Initializes Feature extraction loop based on computed bounding boxes.
 

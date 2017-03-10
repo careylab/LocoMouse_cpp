@@ -147,27 +147,73 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 	double* Wptr = W.ptr<double>(N_paws);
 	PRIOR_SNOUT.push_back(LocoMouse_LocationPrior(Wptr[0], Wptr[1], Wptr[2], Wptr[3], Wptr[4], Wptr[5], Wptr[6]));
 
+	//config_file["use_reference_image_brightness"] >> use_reference_image;
+	//
+	//if (use_reference_image) {
+	//	
+	//	std::string ref_name;
+	//	config_file["reference_image_path"] >> ref_name;
+	//	std::string ref_image_path = REF_PATH + "/" + ref_name;
+	//	
+	//	cv::Mat Iref = cv::imread(ref_image_path);
+	//	if (!Iref.data) {
+	//		//FIXME: Return proper exception.
+	//		std::cout << "Failed to read reference image." << std::endl;
+	//	}
+	//	
+	//	computeNormalizedCDF(Iref, REF_CDF);
+	//}
+
+	config_file["transform_gray_values"] >> transform_gray_values;
 	config_file["use_reference_image_brightness"] >> use_reference_image;
+
+	bool both_true = false;
+
+	if (transform_gray_values & use_reference_image) {
+
+		std::cout << "Only one of 'use_reference_image_brightness' or 'transform_gray_values' should be true. Attempting to read reference image..." << std::endl;
+
+		both_true = true;
+
+	}
 	
 	if (use_reference_image) {
+
+		std::string reference_image_name;
+		config_file["reference_image_path"] >> reference_image_name;
 		
-		std::string ref_name;
-		config_file["reference_image_path"] >> ref_name;
-		std::string ref_image_path = REF_PATH + "/" + ref_name;
-		
-		cv::Mat Iref = cv::imread(ref_image_path);
+		cv::Mat Iref;
+
+		Iref = imread(reference_image_name);
+
 		if (!Iref.data) {
-			//FIXME: Return proper exception.
-			std::cout << "Failed to read reference image." << std::endl;
+			//Reading as a global path failed. Try as a local path rooted at ref_path:
+
+			Iref = imread(REF_PATH + "/" + reference_image_name);
+
+			if (!Iref.data) {
+
+				if (both_true) {
+
+					std::cout << "Could not open the reference image. Applying the provided transformation on the gray levels..." << std::endl;
+					use_reference_image = 0;
+					both_true = false;
+				}
+				else {
+					//FIXME: Throw exception as we failed to read the provided image.
+				}
+			}
 		}
-		
-		computeNormalizedCDF(Iref, REF_CDF);
+
+		computeNormalizedCDF(Iref,REF_CDF_GLT);
 	}
+	
+	if (transform_gray_values & ~both_true) {
+		config_file["gray_value_transformation"] >> REF_CDF_GLT;
 
-	if (use_reference_image) {
-
-		std::string ref_name;
-		config_file["reference_image_path"] >> ref_name;
+		if (!REF_CDF_GLT.data) {
+			//FIXME: Throw exception!
+		}
 
 	}
 
@@ -245,6 +291,7 @@ LocoMouse_Parameters& LocoMouse_Parameters::operator=(LocoMouse_Parameters &&oth
 	moving_average_window = other.moving_average_window;
 
 	mode_int = other.mode_int;
+	transform_gray_values = other.transform_gray_values;
 	use_reference_image = other.use_reference_image;
 	user_provided_bb = other.user_provided_bb;
 
@@ -254,7 +301,7 @@ LocoMouse_Parameters& LocoMouse_Parameters::operator=(LocoMouse_Parameters &&oth
 	LM_FRAME_TO_DEBUG = other.LM_FRAME_TO_DEBUG;
 	LM_N_FRAMES_TO_DEBUG = other.LM_N_FRAMES_TO_DEBUG;
 	LM_VISUAL_DEBUG = other.LM_VISUAL_DEBUG;
-	REF_CDF = other.REF_CDF;
+	REF_CDF_GLT = other.REF_CDF_GLT;
 
 	for (unsigned int i_paws = 0; i_paws < N_paws; ++i_paws) {
 		PRIOR_PAW.push_back(other.PRIOR_PAW[i_paws]);
@@ -268,37 +315,10 @@ LocoMouse_Parameters& LocoMouse_Parameters::operator=(LocoMouse_Parameters &&oth
 
 
 //----- LocoMouse:
-LocoMouse::LocoMouse(int argc, char* argv[]) {
+LocoMouse::LocoMouse(LocoMouse_ParseInputs INPUTS) {
 
-	if (argc != 8) {
-
-		std::cout << "Warning: Invalid input list. The input should be: LocoMouse config.yml video.avi background.png model_file.yml calibration_file.yml side_char output_folder." << std::endl;
-		std::cout << "Attempting to run with default paramters..." << std::endl;
-
-		LM_CALL = std::string(argv[0]);
-		VIDEO_FILE = "temp.avi";
-
-		configurePath();
-
-		CONFIG_FILE = ref_path + "config.yml";
-		VIDEO_FILE = ref_path + "L7Y9_control1_L.avi";
-		BKG_FILE = ref_path + "L7Y9_control1_L.png";
-		MODEL_FILE = ref_path + "model_LocoMouse_paper.yml";
-		CALIBRATION_FILE = ref_path + "IDX_pen_correct_fields2.yml";
-		FLIP_CHAR = "L";
-		OUTPUT_PATH = ref_path + ".";
-		
-	}
-	else {
-		LM_CALL = std::string(argv[0]);
-		CONFIG_FILE = std::string(argv[1]);
-		VIDEO_FILE = std::string(argv[2]);
-		MODEL_FILE = std::string(argv[4]);
-		BKG_FILE = std::string(argv[3]);
-		CALIBRATION_FILE = std::string(argv[5]);
-		FLIP_CHAR = std::string(argv[6]);
-		OUTPUT_PATH = std::string(argv[7]);
-	}
+	//FIXME: Put inside a function:
+	initializePaths(INPUTS);
 
 	//FIXME: Throw exceptions if any of these fail!
 	LM_PARAMS = LocoMouse_Parameters(CONFIG_FILE);
@@ -307,7 +327,7 @@ LocoMouse::LocoMouse(int argc, char* argv[]) {
 	loadCalibration();
 
 	validateImageVideoSize();
-
+ 
 	M = LocoMouse_Model(MODEL_FILE);
 
 	loadFlip();
@@ -360,6 +380,34 @@ LocoMouse::LocoMouse(int argc, char* argv[]) {
 	//			}
 	//		}
 }
+
+void LocoMouse::initializePaths(LocoMouse_ParseInputs INPUT) {
+
+	LM_CALL = INPUT.LM_CALL;
+	CONFIG_FILE = INPUT.CONFIG_FILE;
+	VIDEO_FILE = INPUT.VIDEO_FILE;
+	BKG_FILE = INPUT.BKG_FILE;
+	CALIBRATION_FILE = INPUT.CALIBRATION_FILE;
+	MODEL_FILE = INPUT.MODEL_FILE;
+	FLIP_CHAR = INPUT.FLIP_CHAR;
+	OUTPUT_PATH = INPUT.OUTPUT_PATH;
+	METHOD = stoi(INPUT.METHOD);
+	ref_path = INPUT.REF_PATH;
+
+#ifdef _WIN32
+
+	output_file = OUTPUT_PATH + "output_" + std::string(INPUT.FILE_NAME) + ".yml";
+	debug_file = OUTPUT_PATH + "debug_" + std::string(INPUT.FILE_NAME) + ".yml";
+	debug_text = OUTPUT_PATH + "debug_" + std::string(INPUT.FILE_NAME) + ".txt";
+
+#elif __linux__
+	//FIXME: Recode this once in Linux
+	output_file = OUTPUT_PATH + "/output_" + output_file_name(video) + "yml";
+	debug_file = OUTPUT_PATH + "/debug_" + output_file_name(video) + "yml";
+
+#endif
+}
+
 
 void LocoMouse::loadVideo() {
 
@@ -591,10 +639,7 @@ void LocoMouse::computeBoundingBox() {
 	for (unsigned int i_frames = 0; i_frames < N_FRAMES; ++i_frames) {
 
 		readFrame(I_center);
-		if (LM_PARAMS.LM_DEBUG) {
 
-			DEBUG_TEXT << "Read frame " << i_frames << std::endl;
-		}
 		computeMouseBox(I_median, I_center, I_side_view, I_bottom_view, bb_x[i_frames], bb_y_bottom[i_frames], bb_y_side[i_frames], bb_width[i_frames], bb_height_bottom[i_frames], bb_height_side[i_frames], LM_PARAMS);
 		
 		//Bounding box coordinates should be absolute (i.e. regarding corrected image I)
@@ -1363,8 +1408,28 @@ void LocoMouse::cropBoundingBox() {
 	I_BOTTOM_MOUSE_PAD = I_PAD(BB_BOTTOM_MOUSE_PAD);
 	I_BOTTOM_MOUSE = I_BOTTOM_MOUSE_PAD(BB_UNPAD_MOUSE_BOTTOM);
 
+	if (CURRENT_FRAME == 0) {
+		std::cout << LM_PARAMS.transform_gray_values<< std::endl;
+	}
+
+
 	if (LM_PARAMS.use_reference_image) {
-		histogramMatching(I_BOTTOM_MOUSE, LM_PARAMS.REF_CDF);
+
+		histogramMatching(I_BOTTOM_MOUSE, LM_PARAMS.REF_CDF_GLT);
+
+		if (LM_PARAMS.LM_DEBUG) {
+			DEBUG_TEXT << "Histogram matching done" << std::endl;
+		}
+	}
+	else if (LM_PARAMS.transform_gray_values) {
+		//histogramMatching(I_BOTTOM_MOUSE, LM_PARAMS.REF_CDF);
+
+		LUT(I_BOTTOM_MOUSE, LM_PARAMS.REF_CDF_GLT, I_BOTTOM_MOUSE);
+		
+		if (LM_PARAMS.LM_DEBUG) {
+			DEBUG_TEXT << "Gray Level Transformation Done" << std::endl;
+		}
+
 	}
 
 
@@ -3212,31 +3277,37 @@ void histogramMatching(cv::Mat &I, const cv::Mat& cumsum_ref) {
 
 	bool debug = false; //FIXME: Implement proper debug flags.
 
-	cv::Mat hist;
-	int channels[] = { 0 };
-	int histSize[] = { 256 };
-	float range[] = { 0, 256 };
-	const float* ranges[] = { range };
+	cv::Mat Icumsum;
+	computeNormalizedCDF(I, Icumsum);
 
-	calcHist(&I, 1, channels, cv::Mat(), // do not use mask
-		hist, 1, histSize, ranges,
-		true, // the histogram is uniform
-		false);
+	//cv::Mat hist;
+	//int channels[] = { 0 };
+	//int histSize[] = { 256 };
+	//float range[] = { 0, 256 };
+	//const float* ranges[] = { range };
+
+	//calcHist(&I, 1, channels, cv::Mat(), // do not use mask
+	//	hist, 1, histSize, ranges,
+	//	true, // the histogram is uniform
+	//	false);
+	//
+	//hist = hist / (I.cols*I.rows);
+
+	//cv::Mat Icumsum = cv::Mat::zeros(1, 256, hist.type());
 	
-	hist = hist / (I.cols*I.rows);
+	
 
-	cv::Mat Icumsum = cv::Mat::zeros(1, 256, hist.type());
-	float* pIcumsum = Icumsum.ptr<float>(0);
-	const float* pRefcumsum = cumsum_ref.ptr<float>(0);
-
-	//It seems hist is column-wise which can have problems if we assume its continuous. Better access with .at
-	pIcumsum[0] = hist.at<float>(0);
-	for (int i = 1; i < 256; ++i) {
-		pIcumsum[i] = pIcumsum[i - 1] + hist.at<float>(i);
-	}
+	////It seems hist is column-wise which can have problems if we assume its continuous. Better access with .at
+	//pIcumsum[0] = hist.at<float>(0);
+	//for (int i = 1; i < 256; ++i) {
+	//	pIcumsum[i] = pIcumsum[i - 1] + hist.at<float>(i);
+	//}
 	
 	cv::Mat lookupTable = cv::Mat::zeros(1, 256, CV_8UC1);
 	uchar* pLT = lookupTable.ptr<uchar>(0);
+	const float* pRefcumsum = cumsum_ref.ptr<float>(0);
+	float* pIcumsum = Icumsum.ptr<float>(0);
+	
 
 	int current_j_init = 0;
 	for (int i = 0; i < 256; ++i) {
