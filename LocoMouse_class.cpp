@@ -126,12 +126,6 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 		throw std::invalid_argument(error_message);
 	}
 
-	config_file["mode"] >> mode_int;
-	if (mode_int > 2 || mode_int < 0) {
-		error_message += "mode must belong to {0,1,2}. Was " + std::to_string(mode_int) + ".";
-		throw std::invalid_argument(error_message);
-	}
-
 	cv::Mat W;
 	config_file["location_prior"] >> W;
 	if ((W.cols != 7) || (W.rows != 5)) {
@@ -146,23 +140,6 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 	}
 	double* Wptr = W.ptr<double>(N_paws);
 	PRIOR_SNOUT.push_back(LocoMouse_LocationPrior(Wptr[0], Wptr[1], Wptr[2], Wptr[3], Wptr[4], Wptr[5], Wptr[6]));
-
-	//config_file["use_reference_image_brightness"] >> use_reference_image;
-	//
-	//if (use_reference_image) {
-	//	
-	//	std::string ref_name;
-	//	config_file["reference_image_path"] >> ref_name;
-	//	std::string ref_image_path = REF_PATH + "/" + ref_name;
-	//	
-	//	cv::Mat Iref = cv::imread(ref_image_path);
-	//	if (!Iref.data) {
-	//		//FIXME: Return proper exception.
-	//		std::cout << "Failed to read reference image." << std::endl;
-	//	}
-	//	
-	//	computeNormalizedCDF(Iref, REF_CDF);
-	//}
 
 	config_file["transform_gray_values"] >> transform_gray_values;
 	config_file["use_reference_image_brightness"] >> use_reference_image;
@@ -219,50 +196,46 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 
 	config_file["use_provided_bounding_box"] >> user_provided_bb;
 
-	/*if (user_provided_bb) {
-		//FIXME: Write this properly with exceptions
-		cv::Mat T, B;
-		config_file["bounding_box_top"] >> T;
-		if (T.rows != 1 | T.cols != 4) {
-			std::cout << "bounding_box_top must be a 1x4 opencv matrix." << std::endl;
-			//return -1;
+	std::cout << user_provided_bb << std::endl;
+
+	if (user_provided_bb) {
+		
+		cv::Mat S, B;
+		config_file["bounding_box_side"] >> S;
+
+		if (S.rows != 1 | S.cols != 4) {
+			error_message += "bounding_box_side must be a 1x4 opencv matrix. Was " + std::to_string(S.rows) + " x " + std::to_string(S.cols) + ".";
+
+			throw std::invalid_argument(error_message.c_str());
 		}
-		if (T.type() != CV_32SC1) {
-			std::cout << "bounding_box_top must be provided as a 1x4 opencv matrix of type int (yml: i)." << std::endl;
-			//return -1;
+		if (S.type() != CV_32SC1) {
+			error_message += "bounding_box_side must be provided as a 1x4 opencv matrix of type inS.";
+			throw std::invalid_argument(error_message.c_str());
 		}
 
-		BB_user_top = cv::Rect(T.at<int>(0, 0), T.at<int>(0, 1), T.at<int>(0, 2), T.at<int>(0, 3));
-
-		//if (BB_user_top.x < 0 | BB_user_top.y < 0 | (BB_user_top.x + BB_user_top.width) >= N_cols | (BB_user_top.y + BB_user_top.height)  >= N_rows) {
-		//std::cout << "bounding_box_top exceeds input image dimensions!" << std::endl;
-		///std::cout << BB_user_top << std::endl;
-		//std::cout << "Image size (h,w): " << N_rows << " " << N_cols << std::endl;
-		//return -1;
-		//}
-
+		BB_SIDE = cv::Rect(S.at<int>(0, 0), S.at<int>(0, 1), S.at<int>(0, 2), S.at<int>(0, 3));
+		
 		config_file["bounding_box_bottom"] >> B;
 		if (B.rows != 1 | B.cols != 4) {
+			error_message += "bounding_box_side must be a 1x4 opencv matrix. Was " + std::to_string(B.rows) + " x " + std::to_string(B.cols) + ".";
+
+			throw std::invalid_argument(error_message.c_str());
+
 			std::cout << "bounding_box_bottom must be a 1x4 opencv matrix." << std::endl;
-			//return -1;
 		}
 		if (B.type() != CV_32SC1) {
-			std::cout << "bounding_box_top must be provided as a 1x4 opencv matrix of type in (yml: i)." << std::endl;
-			//return -1;
+			error_message += "bounding_box_bottom must be provided as a 1x4 opencv matrix of type int.";
+			throw std::invalid_argument(error_message.c_str());
 		}
 
-		BB_user_bottom = cv::Rect(B.at<int>(0, 0), B.at<int>(0, 1), B.at<int>(0, 2), B.at<int>(0, 3));
+		BB_BOTTOM = cv::Rect(B.at<int>(0, 0), B.at<int>(0, 1), B.at<int>(0, 2), B.at<int>(0, 3));
 
-		//if (BB_user_bottom.x < 0 | BB_user_bottom.y < 0 | (BB_user_bottom.x + BB_user_bottom.width) >= N_cols | (BB_user_bottom.y + BB_user_bottom.height) >= N_rows) {
-		//std::cout << "bounding_box_bottom exceeds input image dimensions!" << std::endl;
-		//std::cout << BB_user_bottom << std::endl;
-		//std::cout << "Image size (h,w): " << N_rows << " " << N_cols << std::endl;
-		////return -1;
-		//}
-	}*/
+		std::cout << BB_BOTTOM << " " << BB_SIDE << std::endl;
+
+	}
 
 	config_file.release();
-	//return 0;
+	return;
 }
 
 LocoMouse_Parameters::LocoMouse_Parameters() {
@@ -294,6 +267,9 @@ LocoMouse_Parameters& LocoMouse_Parameters::operator=(LocoMouse_Parameters &&oth
 	transform_gray_values = other.transform_gray_values;
 	use_reference_image = other.use_reference_image;
 	user_provided_bb = other.user_provided_bb;
+
+	BB_BOTTOM = other.BB_BOTTOM;
+	BB_SIDE = other.BB_SIDE;
 
 	//To read from inputs:
 	REF_PATH = other.REF_PATH;
@@ -353,32 +329,6 @@ LocoMouse::LocoMouse(LocoMouse_ParseInputs INPUTS) {
 		DEBUG_TEXT.open(debug_text);
 
 	}
-	
-	//FIXME: Check how to deal with the need for this file. Hardcode it?
-	//		//Behaviour mode:
-	//		//cv::Mat H;
-	//		if (mode_int == 1) {
-	//
-	//			std::string disk_path;
-	//
-	//#ifdef _WIN32
-	//			_makepath_s(path_buffer, drive, dir, "diskfilter", "yml"); // Creating path for diskfilter.yml at the same folder as LocoMouse.exe
-	//			disk_path = std::string(path_buffer);
-	//#elif __linux__
-	//			disk_path = ref_path + "/diskfilter.yml";
-	//#endif
-	//			FileStorage disk_filter(ref_path, FileStorage::READ);
-	//			if (!disk_filter.isOpened()) {
-	//				cout << "Could not load the diskfilter.yml at " << disk_path << ". This is essential for the T mode." << std::endl;
-	//				//return -1;
-	//			}
-	//			disk_filter["H"] >> H;
-	//			disk_filter.release();
-	//			
-	//			if (LM_PARAMS.LM_DEBUG) {
-	//				DEBUG_TEXT << "Disk filter loaded." << std::endl;
-	//			}
-	//		}
 }
 
 void LocoMouse::initializePaths(LocoMouse_ParseInputs INPUT) {
@@ -593,12 +543,60 @@ void LocoMouse::configurePath() {
 
 }
 
+void LocoMouse::getBoundingBox() {
+
+	if (LM_PARAMS.user_provided_bb) {
+		//Validating BB size and assigning user provided values:
+		cv::Rect I_rect = cv::Rect(0, 0, N_COLS, N_ROWS);
+
+		if (LM_PARAMS.LM_DEBUG) {
+			DEBUG_TEXT << "===== Assigning the Provided BB coordinates: " << std::endl;
+			DEBUG_TEXT << "BB_BOTTOM_MOUSE: " << LM_PARAMS.BB_BOTTOM << std::endl;
+			DEBUG_TEXT << "BB_SIDE_MOUSE: " << LM_PARAMS.BB_SIDE << std::endl;
+		}
+
+		if ((I_rect & LM_PARAMS.BB_SIDE) != LM_PARAMS.BB_SIDE) {
+			throw std::invalid_argument("User provided bounding_box_side exceeds corrected image dimensions!");
+		}
+
+		if ((I_rect & LM_PARAMS.BB_BOTTOM) != LM_PARAMS.BB_BOTTOM) {
+			throw std::invalid_argument("User provided bounding_box_ exceeds corrected image dimensions!");
+		}
+
+		BB_SIDE_MOUSE = LM_PARAMS.BB_SIDE;
+		BB_SIDE_MOUSE.x = 0; BB_SIDE_MOUSE.y = 0;
+		
+		BB_BOTTOM_MOUSE = LM_PARAMS.BB_BOTTOM;
+		BB_BOTTOM_MOUSE.x = 0; BB_BOTTOM_MOUSE.y = 0;
+
+		int bb_x_pos = LM_PARAMS.BB_BOTTOM.x + LM_PARAMS.BB_BOTTOM.width;
+		int bb_y_side_pos = LM_PARAMS.BB_SIDE.y + LM_PARAMS.BB_SIDE.height;
+		int bb_y_bottom_pos = LM_PARAMS.BB_BOTTOM.y + LM_PARAMS.BB_BOTTOM.height;
+
+		for (unsigned int i_frames = 0; i_frames < N_FRAMES; i_frames++) {
+
+			BB_X_POS[i_frames] = bb_x_pos;
+			BB_Y_SIDE_POS[i_frames] = bb_y_side_pos;
+			BB_Y_BOTTOM_POS[i_frames] = bb_y_bottom_pos;
+
+		}
+
+	}
+	else {
+		//Computing BB size from the video:
+		computeBoundingBox();
+
+	}
+
+}
+
 void LocoMouse::computeBoundingBox() {
 	//FIXME: The median filter is an option for this method in particular. Define it properly in the config.yml file as such.
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "===== Computing the bounding box coordinates: " << std::endl;
 	}
+
 
 	uint padding_offset = LM_PARAMS.median_filter_size / 2;
 	uint padding_size = padding_offset * 2;
@@ -627,12 +625,12 @@ void LocoMouse::computeBoundingBox() {
 		DEBUG_TEXT << "I_bottom_view.size(): " << I_bottom_view.size() << std::endl;
 		DEBUG_TEXT << "I_side_view.size(): " << I_side_view.size() << std::endl;
 	}
-	
+
 
 	std::vector<double> bb_x(N_FRAMES), bb_y_bottom(N_FRAMES), bb_y_side(N_FRAMES), bb_width(N_FRAMES), bb_height_bottom(N_FRAMES), bb_height_side(N_FRAMES);
 
 	if (LM_PARAMS.LM_DEBUG) {
-		
+
 		DEBUG_TEXT << "----- Computing the bounding box position per frame: " << I_center.size() << std::endl;
 	}
 
@@ -641,10 +639,9 @@ void LocoMouse::computeBoundingBox() {
 		readFrame(I_center);
 
 		computeMouseBox(I_median, I_center, I_side_view, I_bottom_view, bb_x[i_frames], bb_y_bottom[i_frames], bb_y_side[i_frames], bb_width[i_frames], bb_height_bottom[i_frames], bb_height_side[i_frames], LM_PARAMS);
-		
+
 		//Bounding box coordinates should be absolute (i.e. regarding corrected image I)
 		bb_y_bottom[i_frames] += BB_BOTTOM_VIEW.y;
-
 	}
 
 	//Post processing per-frame boxes to compute final bounding box sizes:
@@ -656,6 +653,7 @@ void LocoMouse::computeBoundingBox() {
 		DEBUG_TEXT << "----- Final BB sizes: " << std::endl;
 		DEBUG_TEXT << "BB_SIDE_MOUSE: " << BB_SIDE_MOUSE << std::endl;
 		DEBUG_TEXT << "BB_BOTTOM_MOUSE: " << BB_BOTTOM_MOUSE << std::endl;
+		DEBUG_TEXT << "----- Smoothing the BB trajectory over time... " << std::endl;
 	}
 
 	//Smoothing BB trajectory:
@@ -676,21 +674,67 @@ void LocoMouse::initializeFeatureLoop() {
 	   FIXME: Encapsulate each of these parts into a sub-function.
 
 	*/
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "===== Computing the Padded Boxes: " << std::endl;
+	}
 
 	//Initializing I according to the newly computed bounding boxes and pad sizes:
 	std::vector <int> zero_pad_rows_pre_vec = { BB_SIDE_MOUSE.height , M.size_pre_side().height , M.size_pre_bottom().height };
 	std::vector <int> zero_pad_cols_pre_vec = { BB_BOTTOM_MOUSE.width, M.size_pre_side().width, M.size_pre_bottom().width };
 
+	if (LM_PARAMS.LM_DEBUG) {
+
+		DEBUG_TEXT << "zero_pad_rows_pre_vec: ";
+
+		for (unsigned int i = 0; i < 3; i++) {
+
+			DEBUG_TEXT << zero_pad_rows_pre_vec[i] << " ";
+
+		}
+		DEBUG_TEXT << std::endl;
+		
+		DEBUG_TEXT << "zero_pad_cols_pre_vec: ";
+
+		for (unsigned int i = 0; i < 3; i++) {
+
+			DEBUG_TEXT << zero_pad_cols_pre_vec[i] << " ";
+
+		}
+		DEBUG_TEXT << std::endl;
+
+	}
+
+
 	PAD_PRE_ROWS = *std::max_element(zero_pad_rows_pre_vec.begin(), zero_pad_rows_pre_vec.end());
 	PAD_POST_ROWS = (M.size_post_bottom().height > M.size_post_side().height) ? M.size_post_bottom().height : M.size_post_side().height;
+
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "PAD_PRE_ROWS: " << PAD_PRE_ROWS << std::endl;
+		DEBUG_TEXT << "PAD_POST_ROWS: " << PAD_POST_ROWS << std::endl;
+	}
+
 
 	PAD_PRE_COLS = *std::max_element(zero_pad_cols_pre_vec.begin(), zero_pad_cols_pre_vec.end());
 	PAD_POST_COLS = (M.size_post_bottom().width > M.size_post_side().width) ? M.size_post_bottom().width : M.size_post_side().width;
 
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "PAD_PRE_COLS: " << PAD_PRE_COLS << std::endl;
+		DEBUG_TEXT << "PAD_POST_COL: " << PAD_POST_COLS << std::endl;
+	}
+
 	I_PAD = cv::Mat::zeros(PAD_PRE_ROWS + N_ROWS + PAD_POST_ROWS, PAD_PRE_COLS + N_COLS + PAD_POST_COLS, CV_8UC1);
 	I_PREV_PAD = cv::Mat::zeros(I_PAD.size(), CV_8UC1);
 
+
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "I_PAD.size(): " << I_PAD.size() << std::endl;
+	}
+
 	I_UNPAD = cv::Rect(PAD_PRE_COLS, PAD_PRE_ROWS, N_COLS, N_ROWS);
+
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "I_UNPAD: " << I_UNPAD << std::endl;
+	}
 
 	I = I_PAD(I_UNPAD);
 
@@ -757,6 +801,10 @@ void LocoMouse::initializeFeatureLoop() {
 	//Resetting the video pointer as the computations of the bounding box could have read it:
 	V.set(CV_CAP_PROP_POS_FRAMES, 0);
 	CURRENT_FRAME = -1; //Frame index is incremented on read;
+
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "===== END " << std::endl << std::endl;
+	}
 
 }
 
@@ -1401,7 +1449,7 @@ void LocoMouse::cropBoundingBox() {
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "I_PAD.size(): " << I_PAD.size() << std::endl;
-		DEBUG_TEXT << "BB_BOTTOM_MOUSE_PAD: " << BB_BOTTOM_MOUSE << std::endl;
+		DEBUG_TEXT << "BB_BOTTOM_MOUSE_PAD: " << BB_BOTTOM_MOUSE_PAD << std::endl;
 		DEBUG_TEXT << "BB_UNPAD_MOUSE_BOTTOM: " << BB_UNPAD_MOUSE_BOTTOM << std::endl;
 	}
 

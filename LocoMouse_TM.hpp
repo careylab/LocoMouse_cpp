@@ -37,9 +37,4 @@ public:
 
 };
 
-class LocoMouse_HF : public LocoMouse {
-
-};
-
-
 #endif

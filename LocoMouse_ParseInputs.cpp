@@ -42,9 +42,7 @@ void LocoMouse_ParseInputs::configurePath() {
 
 
 LocoMouse_ParseInputs::LocoMouse_ParseInputs(int argc, char* argv[]) {
-
-
-
+	
 	if (argc != 9) {
 
 		std::cout << "Warning: Invalid input list. The input should be: LocoMouse method config.yml video.avi background.png model_file.yml calibration_file.yml side_char output_folder." << std::endl;

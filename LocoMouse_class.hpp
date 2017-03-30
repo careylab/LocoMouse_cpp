@@ -74,6 +74,8 @@ public:
 	int transform_gray_values = 0;
 	int user_provided_bb = 0;
 
+	cv::Rect BB_BOTTOM, BB_SIDE;
+
 	//To read from inputs:
 	std::string REF_PATH = "./";
 	bool LM_DEBUG = false;
@@ -305,6 +307,8 @@ public:
 	virtual void readFrame(); //Reads and processes next frame into I
 	
 	void readFrame(cv::Mat& I); //Reads and processes next frame into provided matrix.
+
+	void getBoundingBox(); //Wrapper for deciding between user provided or computing BB;
 
 	virtual void computeBoundingBox(); //Computes mouse position and bounding box along the video
 	

@@ -380,7 +380,6 @@ double MATSPARSE::get(int irow, int icol) {
 
 ostream& operator<< (ostream &out, MATSPARSE const &M) {
 
-
 	if (M.nz() == 0) {
 		out << "Matrix is empty!" << endl;
 		return out;
@@ -390,14 +389,9 @@ ostream& operator<< (ostream &out, MATSPARSE const &M) {
 	const int* Jc = M.getJc();
 	const double* Pr = M.getPr();
 
-	//cerr << "Pointer values during printing" << endl;
-	//cerr << Ir << endl << Jc << endl << Pr << endl;
-
 	for (int icol = 0; icol < M.Ncols(); ++icol) {
 
 		int n_rows_per_col = Jc[icol + 1] - Jc[icol];
-
-		//cerr << "icol: " << icol << endl << "n_rows_per_col: " << n_rows_per_col << endl;
 
 		for (int irow = 0; irow < n_rows_per_col; ++irow) {
 			out << "(" << Ir[Jc[icol] + irow] << "," << icol << ") = " << Pr[Jc[icol] + irow] << endl;

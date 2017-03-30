@@ -43,14 +43,12 @@ int main(int argc, char* argv[]) {
 		std::unique_ptr<LocoMouse> L = LocoMouse_Initialize(inputs);
 
 		//Compute Bounding Box location accross video:
-		L->computeBoundingBox();
+		L->getBoundingBox();
 
 		L->initializeFeatureLoop();
 
-
 		//Compute per-frame candidate locations:
 		for (unsigned int i_frames = 0; i_frames < L->N_frames(); ++i_frames) {
-			//debug_text << "Current frame: " << i_frames << std::endl;
 			
 			//Read new image:
 			L->readFrame();

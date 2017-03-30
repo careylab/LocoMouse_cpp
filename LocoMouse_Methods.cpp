@@ -1,4 +1,7 @@
 #include "LocoMouse_Methods.hpp"
+/* 
+* When a new method is designed, it must be added here for LocoMouse to known which class to initialize. 
+*/
 
 std::unique_ptr<LocoMouse> LocoMouse_Initialize(LocoMouse_ParseInputs INPUT) {
 
