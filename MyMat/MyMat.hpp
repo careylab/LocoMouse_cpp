@@ -27,7 +27,7 @@ public:
 	
 
 	MyMat();
-	MyMat& MyMat::operator=(const MyMat &M); //Assignment constructor;
+	MyMat& operator=(const MyMat &M); //Assignment constructor;
 	MyMat(const MyMat &M); //Copy constructor;
 	~MyMat();
 	MyMat(unsigned int, unsigned int);
@@ -76,8 +76,8 @@ public:
 	MATSPARSE(const MyMat* M);
 	MATSPARSE(const MATSPARSE &M); //copy constructor
 	MATSPARSE(MATSPARSE &M); //move constructor
-	MATSPARSE& MATSPARSE::operator=(const MATSPARSE &M); //copy assignment
-	MATSPARSE& MATSPARSE::operator=(MATSPARSE &&M); //move assignment
+	MATSPARSE& operator=(const MATSPARSE &M); //copy assignment
+	MATSPARSE& operator=(MATSPARSE &&M); //move assignment
 
 	double get(int, int);
 	inline int* getIr() const { return Ir; };

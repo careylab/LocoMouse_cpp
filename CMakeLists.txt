@@ -6,6 +6,11 @@ find_package (OpenCV REQUIRED)
 set (LocoMouse_VERSION_MAJOR 1)
 set (LocoMouse_VERSION_MINOR 0)
 
+# Compiler options:
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 # Configure file to get version number, optional flags, etc.
 configure_file (
 	"${PROJECT_SOURCE_DIR}/LocoMouseConfig.h.in"
@@ -15,19 +20,10 @@ configure_file (
 add_subdirectory(Candidates)
 add_subdirectory(MyMat)
 add_subdirectory(match2nd)
+add_subdirectory(LocoMouse_Core)
 
-include_directories(${Candidates_INCLUDE_DIRS} ${MyMat_INCLUDE_DIRS} ${match2nd_INCLUDE_DIRS})
-
-# Compiler options:
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_BUILD_TYPE Release)
-
-add_executable(LocoMouse LocoMouse.cpp)
-target_link_libraries(LocoMouse ${OpenCV_LIBS} MyMat match2nd Candidates)
-
-# Compiler options:
-#set(TARGET LocoMouse PROPERTY CMAKE_CXX_STANDARD 11)
-#set(TARGET LocoMouse PROPERTY CMAKE_CXX_STANDARD_REQUIRED ON)
-#set(TARGET LocoMouse PROPERTU CMAKE_BUILD_TYPE Release)
+include_directories(${Candidates_INCLUDE_DIRS} ${MyMat_INCLUDE_DIRS} ${match2nd_INCLUDE_DIRS} ${LocoMouse_Core_INCLUDE_DIRS})
 
 
+add_executable(LocoMouse main.cpp)
+target_link_libraries(LocoMouse ${OpenCV_LIBS} MyMat match2nd Candidates LocoMouse_Core) 
