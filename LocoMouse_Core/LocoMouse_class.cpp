@@ -2,6 +2,9 @@
 
 //----- LocoMouse_Parameters
 LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
+	/*
+	* Imports algorithm options from the config file.
+	*/
 
 	//In case there are exceptions:
 	std::string error_message = "Invalid configuration parameter: ";
@@ -13,25 +16,25 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 
 	int lm_debug;
 	config_file["verbose_debug"] >> lm_debug;
-	LM_DEBUG = (bool) lm_debug;
+	LM_DEBUG = (bool)lm_debug;
 
 	config_file["N_debug_frames"] >> LM_N_FRAMES_TO_DEBUG;
-	
+
 	if (LM_N_FRAMES_TO_DEBUG < 0) {
 		error_message += "N_debug_frames must not be negative.";
 		throw std::invalid_argument(error_message);
 	}
 
 	config_file["parameters_for_visual_debug"] >> lm_debug;
-	LM_VISUAL_DEBUG = (bool) lm_debug;
-	
+	LM_VISUAL_DEBUG = (bool)lm_debug;
+
 
 	//Connectivity for the Connected components algorithm.
 	config_file["conn_comp_connectivity"] >> conn_comp_connectivity;
 
 	if ((conn_comp_connectivity != 4) && (conn_comp_connectivity != 8)) {
 		error_message += "conn_comp_connectivity must be either 4 or 8. Was " + std::to_string(conn_comp_connectivity) + ".";
-		throw std::invalid_argument (error_message);
+		throw std::invalid_argument(error_message);
 	}
 
 	//Median Filter used for bb estimation:
@@ -102,7 +105,7 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 
 	config_file["alpha_vel"] >> alpha_vel; //Relative term for the velocity costs on the match2nd tracking algorithm.
 	if (alpha_vel < 0) {
-		error_message += "alpha_vel must be non-negative. Was "+ std::to_string(alpha_vel) + ".";
+		error_message += "alpha_vel must be non-negative. Was " + std::to_string(alpha_vel) + ".";
 		std::cout << "Error message is: " << error_message << std::endl;
 		throw std::invalid_argument(error_message);
 	}
@@ -176,12 +179,12 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 		both_true = true;
 
 	}
-	
+
 	if (use_reference_image) {
 
 		std::string reference_image_name;
 		config_file["reference_image_path"] >> reference_image_name;
-		
+
 		cv::Mat Iref;
 
 		Iref = imread(reference_image_name);
@@ -205,9 +208,9 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 			}
 		}
 
-		computeNormalizedCDF(Iref,REF_CDF_GLT);
+		computeNormalizedCDF(Iref, REF_CDF_GLT);
 	}
-	
+
 	if (transform_gray_values & ~both_true) {
 		config_file["gray_value_transformation"] >> REF_CDF_GLT;
 
@@ -217,22 +220,25 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 
 	}
 
-	config_file["use_provided_bounding_box"] >> user_provided_bb;
+	config_file["use_provided_bounding_box"] >> use_provided_bb;
 
-	/*if (user_provided_bb) {
+	if (use_provided_bb) {
+
 		//FIXME: Write this properly with exceptions
-		cv::Mat T, B;
-		config_file["bounding_box_top"] >> T;
-		if (T.rows != 1 | T.cols != 4) {
+		cv::Mat S, B;
+		config_file["bounding_box_side"] >> S;
+		if (S.rows != 1 | S.cols != 4) {
+			//FIXME: Add proper exception.
 			std::cout << "bounding_box_top must be a 1x4 opencv matrix." << std::endl;
 			//return -1;
 		}
-		if (T.type() != CV_32SC1) {
+		if (S.type() != CV_32SC1) {
+			//FIXME: Add proper exception.
 			std::cout << "bounding_box_top must be provided as a 1x4 opencv matrix of type int (yml: i)." << std::endl;
 			//return -1;
 		}
 
-		BB_user_top = cv::Rect(T.at<int>(0, 0), T.at<int>(0, 1), T.at<int>(0, 2), T.at<int>(0, 3));
+		BB_USER_SIDE = cv::Rect(S.at<int>(0, 0), S.at<int>(0, 1), S.at<int>(0, 2), S.at<int>(0, 3));
 
 		//if (BB_user_top.x < 0 | BB_user_top.y < 0 | (BB_user_top.x + BB_user_top.width) >= N_cols | (BB_user_top.y + BB_user_top.height)  >= N_rows) {
 		//std::cout << "bounding_box_top exceeds input image dimensions!" << std::endl;
@@ -243,15 +249,17 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 
 		config_file["bounding_box_bottom"] >> B;
 		if (B.rows != 1 | B.cols != 4) {
+			//FIXME: Add proper exception.
 			std::cout << "bounding_box_bottom must be a 1x4 opencv matrix." << std::endl;
 			//return -1;
 		}
 		if (B.type() != CV_32SC1) {
+			//FIXME: Add proper exception.
 			std::cout << "bounding_box_top must be provided as a 1x4 opencv matrix of type in (yml: i)." << std::endl;
 			//return -1;
 		}
 
-		BB_user_bottom = cv::Rect(B.at<int>(0, 0), B.at<int>(0, 1), B.at<int>(0, 2), B.at<int>(0, 3));
+		BB_USER_BOTTOM = cv::Rect(B.at<int>(0, 0), B.at<int>(0, 1), B.at<int>(0, 2), B.at<int>(0, 3));
 
 		//if (BB_user_bottom.x < 0 | BB_user_bottom.y < 0 | (BB_user_bottom.x + BB_user_bottom.width) >= N_cols | (BB_user_bottom.y + BB_user_bottom.height) >= N_rows) {
 		//std::cout << "bounding_box_bottom exceeds input image dimensions!" << std::endl;
@@ -259,7 +267,7 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 		//std::cout << "Image size (h,w): " << N_rows << " " << N_cols << std::endl;
 		////return -1;
 		//}
-	}*/
+	}
 
 	config_file.release();
 	//return 0;
@@ -293,7 +301,7 @@ LocoMouse_Parameters& LocoMouse_Parameters::operator=(LocoMouse_Parameters &&oth
 	mode_int = other.mode_int;
 	transform_gray_values = other.transform_gray_values;
 	use_reference_image = other.use_reference_image;
-	user_provided_bb = other.user_provided_bb;
+	use_provided_bb = other.use_provided_bb;
 
 	//To read from inputs:
 	REF_PATH = other.REF_PATH;
@@ -302,6 +310,9 @@ LocoMouse_Parameters& LocoMouse_Parameters::operator=(LocoMouse_Parameters &&oth
 	LM_N_FRAMES_TO_DEBUG = other.LM_N_FRAMES_TO_DEBUG;
 	LM_VISUAL_DEBUG = other.LM_VISUAL_DEBUG;
 	REF_CDF_GLT = other.REF_CDF_GLT;
+
+	BB_USER_BOTTOM = other.BB_USER_BOTTOM;
+	BB_USER_SIDE = other.BB_USER_SIDE;
 
 	for (unsigned int i_paws = 0; i_paws < N_paws; ++i_paws) {
 		PRIOR_PAW.push_back(other.PRIOR_PAW[i_paws]);
@@ -327,7 +338,7 @@ LocoMouse::LocoMouse(LocoMouse_ParseInputs INPUTS) {
 	loadCalibration();
 
 	validateImageVideoSize();
- 
+
 	M = LocoMouse_Model(MODEL_FILE);
 
 	loadFlip();
@@ -353,7 +364,7 @@ LocoMouse::LocoMouse(LocoMouse_ParseInputs INPUTS) {
 		DEBUG_TEXT.open(debug_text);
 
 	}
-	
+
 	//FIXME: Check how to deal with the need for this file. Hardcode it?
 	//		//Behaviour mode:
 	//		//cv::Mat H;
@@ -394,9 +405,9 @@ void LocoMouse::initializePaths(LocoMouse_ParseInputs INPUT) {
 	METHOD = stoi(INPUT.METHOD);
 	ref_path = INPUT.REF_PATH;
 
-	output_file = OUTPUT_PATH + "output_" + std::string(INPUT.FILE_STEM) + ".yml";
-	debug_file = OUTPUT_PATH + "debug_" + std::string(INPUT.FILE_STEM) + ".yml";
-	debug_text = OUTPUT_PATH + "debug_" + std::string(INPUT.FILE_STEM) + ".txt";
+	output_file = OUTPUT_PATH + "/output_" + std::string(INPUT.FILE_STEM) + ".yml";
+	debug_file = OUTPUT_PATH + "/debug_" + std::string(INPUT.FILE_STEM) + ".yml";
+	debug_text = OUTPUT_PATH + "/debug_" + std::string(INPUT.FILE_STEM) + ".txt";
 
 }
 
@@ -550,6 +561,28 @@ void LocoMouse::validateImageVideoSize() {
 		throw std::runtime_error(Stream_Formatter() << "Calibration mapping indices out of range. Minimum index is 0, found  " << min_calib_val << "; Maximum index is : " << (N_row_video*N_col_video) << ", found " << max_calib_val << '\n');
 
 	}
+
+	//Validating the size of user provided bounding boxes:
+	if (LM_PARAMS.use_provided_bb) {
+
+		/*std::cout << LM_PARAMS.BB_USER_BOTTOM.x << std::endl;
+		std::cout << LM_PARAMS.BB_USER_BOTTOM.y << std::endl;
+		std::cout << LM_PARAMS.BB_USER_BOTTOM.width << std::endl;
+		std::cout << LM_PARAMS.BB_USER_BOTTOM.height << std::endl;
+		std::cout << N_ROWS << std::endl;
+		std::cout << N_COLS << std::endl;*/
+		
+		if (LM_PARAMS.BB_USER_BOTTOM.x < 0 | LM_PARAMS.BB_USER_BOTTOM.y < 0 | ((LM_PARAMS.BB_USER_BOTTOM.x + LM_PARAMS.BB_USER_BOTTOM.width) >= N_COLS) | ((LM_PARAMS.BB_USER_BOTTOM.y + LM_PARAMS.BB_USER_BOTTOM.height) >= N_ROWS)) {
+			throw std::runtime_error(Stream_Formatter() << "Provided bounding box for the bottom view exceeds the image dimensions." +'\n');
+		}
+
+
+		if (LM_PARAMS.BB_USER_SIDE.x < 0 | LM_PARAMS.BB_USER_SIDE.y < 0 | ((LM_PARAMS.BB_USER_SIDE.x + LM_PARAMS.BB_USER_SIDE.width) >= N_COLS) | ((LM_PARAMS.BB_USER_SIDE.y + LM_PARAMS.BB_USER_SIDE.height) >= N_ROWS)) {
+			throw std::runtime_error(Stream_Formatter() << "Provided bounding box for the side view exceeds the image dimensions." + '\n');
+		}
+
+	}
+
 }
 
 // void LocoMouse::configurePath() {
@@ -584,10 +617,44 @@ void LocoMouse::validateImageVideoSize() {
 // #endif
 
 // }
+void LocoMouse::getBoundingBox() {
+
+	if (LM_PARAMS.use_provided_bb) {
+
+		unsigned int new_x_location = LM_PARAMS.BB_USER_BOTTOM.x + LM_PARAMS.BB_USER_BOTTOM.width;
+		unsigned int new_y_side_location = LM_PARAMS.BB_USER_SIDE.y + LM_PARAMS.BB_USER_SIDE.height;
+		unsigned int new_y_bottom_location = LM_PARAMS.BB_USER_BOTTOM.y + LM_PARAMS.BB_USER_BOTTOM.height;
+
+
+		//Fill in the BOTTOM RIGHT CORNER info with the provided box:
+		for (unsigned int i_frames = 0; i_frames < N_FRAMES; ++i_frames) {
+			
+			BB_X_POS[i_frames] = new_x_location;
+			BB_Y_SIDE_POS[i_frames] = new_y_side_location;
+			BB_Y_BOTTOM_POS[i_frames] = new_y_bottom_location;
+
+		}
+
+		//Copying the info to the LocoMouse class bounding boxes:
+		BB_BOTTOM_MOUSE = LM_PARAMS.BB_USER_BOTTOM;
+		BB_SIDE_MOUSE = LM_PARAMS.BB_USER_SIDE;
+
+		//The code shifts these boxes based on BB_X_POS, BB_Y_SIDE_POS and BB_Y_BOTTOM_POS
+		BB_BOTTOM_MOUSE.x = 0; BB_BOTTOM_MOUSE.y = 0;
+		BB_SIDE_MOUSE.x = 0; BB_SIDE_MOUSE.y = 0;
+
+	}
+	else {
+
+		computeBoundingBox();
+		
+	}
+	
+}
+
 
 void LocoMouse::computeBoundingBox() {
 	//FIXME: The median filter is an option for this method in particular. Define it properly in the config.yml file as such.
-
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "===== Computing the bounding box coordinates: " << std::endl;
 	}
@@ -619,12 +686,12 @@ void LocoMouse::computeBoundingBox() {
 		DEBUG_TEXT << "I_bottom_view.size(): " << I_bottom_view.size() << std::endl;
 		DEBUG_TEXT << "I_side_view.size(): " << I_side_view.size() << std::endl;
 	}
-	
+
 
 	std::vector<double> bb_x(N_FRAMES), bb_y_bottom(N_FRAMES), bb_y_side(N_FRAMES), bb_width(N_FRAMES), bb_height_bottom(N_FRAMES), bb_height_side(N_FRAMES);
 
 	if (LM_PARAMS.LM_DEBUG) {
-		
+
 		DEBUG_TEXT << "----- Computing the bounding box position per frame: " << I_center.size() << std::endl;
 	}
 
@@ -633,7 +700,7 @@ void LocoMouse::computeBoundingBox() {
 		readFrame(I_center);
 
 		computeMouseBox(I_median, I_center, I_side_view, I_bottom_view, bb_x[i_frames], bb_y_bottom[i_frames], bb_y_side[i_frames], bb_width[i_frames], bb_height_bottom[i_frames], bb_height_side[i_frames], LM_PARAMS);
-		
+
 		//Bounding box coordinates should be absolute (i.e. regarding corrected image I)
 		bb_y_bottom[i_frames] += BB_BOTTOM_VIEW.y;
 
@@ -723,7 +790,7 @@ void LocoMouse::initializeFeatureLoop() {
 
 	ONG.reserve(Nong);
 	cv::Point_<double> P = cv::Point_<double>(0, 0);
-	
+
 	for (unsigned int i = 0; i < Nong; ++i) {
 		ONG.push_back(P);
 	}
@@ -851,6 +918,19 @@ void LocoMouse::computeUnaryCostsBottom() {
 	//Compute Unary potentials:
 	UNARY_BOTTOM_PAW.push_back(unaryCostBox(CANDIDATES_BOTTOM_PAW.back(), BB_BOTTOM_MOUSE, LM_PARAMS.PRIOR_PAW));
 
+	if (CURRENT_FRAME == 0) {
+
+		imwrite("I_bb_bottom.png", I_BOTTOM_MOUSE);
+		ofstream debug_hf; debug_hf.open("debug_hf.txt");
+		for (unsigned int i = 0; i < CANDIDATES_BOTTOM_PAW[0].size(); i++) {
+			debug_hf << CANDIDATES_BOTTOM_PAW[0][i] << std::endl;
+		}
+		debug_hf << UNARY_BOTTOM_PAW[0];
+		debug_hf.close();
+
+	}
+
+
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Bottom Paw done. " << std::endl;
 	}
@@ -954,8 +1034,8 @@ void LocoMouse::computeMouseBox(cv::Mat &I_median, cv::Mat &I, cv::Mat &I_side_v
 	//FIXME: What if there was no BB in the image? firstLastOverT will return -1 which if left as is will distort the position of the BB.
 	//Assigning the values to the bounding box vectors:
 	bb_x = (lims_row_bottom[1] > lims_row_top[1]) ? (double)lims_row_bottom[1] : (double)lims_row_top[1];
-	bb_y_bottom = (double) lims_col_bottom[1];
-	bb_y_side = (double) lims_col_top[1];
+	bb_y_bottom = (double)lims_col_bottom[1];
+	bb_y_side = (double)lims_col_top[1];
 
 	//FIXME: By the definition of lims, the real dimensions should be [1]-[0] + 1 due to indicies starting at 0. Was kept like this to be consistent with MATLAB.
 	unsigned int wt = lims_row_top[1] - lims_row_top[0];
@@ -1228,7 +1308,7 @@ void LocoMouse::readFrame(cv::Mat &I) {
 		DEBUG_TEXT << "Read frame from image. Current frame is: " << CURRENT_FRAME << std::endl;
 
 	extractChannel(F, F, 0); //Although video is grayscale opencv always reads with 3 channels.
-	
+
 	/*if (F.type() == CV_8UC3) {
 		//FIXME: Don't convert as this implies computations. Simply get the first channel.
 		cvtColor(F, F, CV_BGR2GRAY); //The system sometimes outputs color videos, don't know why. Its a waste of time.
@@ -1248,7 +1328,7 @@ void LocoMouse::readFrame(cv::Mat &I) {
 
 	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "Normalized input image range." << std::endl;
-	
+
 	//Undistorting the image:
 	correctImage(F, I);
 
@@ -1368,10 +1448,6 @@ void LocoMouse::cropBoundingBox() {
 	I_BOTTOM_MOUSE_PAD = I_PAD(BB_BOTTOM_MOUSE_PAD);
 	I_BOTTOM_MOUSE = I_BOTTOM_MOUSE_PAD(BB_UNPAD_MOUSE_BOTTOM);
 
-	if (CURRENT_FRAME == 0) {
-		std::cout << LM_PARAMS.transform_gray_values<< std::endl;
-	}
-
 
 	if (LM_PARAMS.use_reference_image) {
 
@@ -1385,7 +1461,7 @@ void LocoMouse::cropBoundingBox() {
 		//histogramMatching(I_BOTTOM_MOUSE, LM_PARAMS.REF_CDF);
 
 		LUT(I_BOTTOM_MOUSE, LM_PARAMS.REF_CDF_GLT, I_BOTTOM_MOUSE);
-		
+
 		if (LM_PARAMS.LM_DEBUG) {
 			DEBUG_TEXT << "Gray Level Transformation Done" << std::endl;
 		}
@@ -1838,7 +1914,7 @@ vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cl
 		Rect_1 -= detections[i].point();
 	}
 	//myfile.close();
-	
+
 	return candidates;
 
 }
@@ -2538,7 +2614,7 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature &F, const unsign
 
 	//Mask for removing tail interference on bottom view paw tracking:
 	TAIL_MASK = Filtered_tail_bottom_binary;
-	
+
 	//Masking the bottom region on the top view:
 	cv::Mat tail_bottom_x_location;
 	cv::reduce(Filtered_tail_bottom_binary, tail_bottom_x_location, 0, CV_REDUCE_MAX);
@@ -2716,9 +2792,9 @@ void LocoMouse::exportDebugVariables() {
 	DEBUG_OUTPUT << "M_snout_bottom" << TRACK_INDEX_SNOUT_BOTTOM;
 
 	string m_paw_side = "M_paw_side_";
-	
 
-	for (unsigned int i_feature = 0; i_feature < LM_PARAMS.N_paws; i_feature ++) {
+
+	for (unsigned int i_feature = 0; i_feature < LM_PARAMS.N_paws; i_feature++) {
 
 		stringstream s;
 		s << m_paw_side << i_feature;
@@ -2741,7 +2817,7 @@ void LocoMouse::exportDebugVariables() {
 	}
 
 	//Writing the number of frames:
-	DEBUG_OUTPUT << "N_frames" << (int) N_FRAMES;
+	DEBUG_OUTPUT << "N_frames" << (int)N_FRAMES;
 
 	//Occluded distance:
 	DEBUG_OUTPUT << "occluded_distance" << LM_PARAMS.max_displacement;
@@ -2754,27 +2830,27 @@ void LocoMouse::exportDebugVariables() {
 	//Writing the BB positions:
 	DEBUG_OUTPUT << "bb_x_avg" << "[:";
 	for (uint i = 0; i < N_FRAMES; i++) {
-		DEBUG_OUTPUT << (int) BB_X_POS[i];
+		DEBUG_OUTPUT << (int)BB_X_POS[i];
 	}
 	DEBUG_OUTPUT << "]";
 
 	//Writing the BB positions:
 	DEBUG_OUTPUT << "bb_yt_avg" << "[:";
 	for (uint i = 0; i < N_FRAMES; i++) {
-		DEBUG_OUTPUT << (int) BB_Y_SIDE_POS[i];
+		DEBUG_OUTPUT << (int)BB_Y_SIDE_POS[i];
 	}
 	DEBUG_OUTPUT << "]";
 
 	//Writing the BB positions:
 	DEBUG_OUTPUT << "bb_yb_avg" << "[:";
 	for (uint i = 0; i < N_FRAMES; i++) {
-		DEBUG_OUTPUT << (int) BB_Y_BOTTOM_POS[i];
+		DEBUG_OUTPUT << (int)BB_Y_BOTTOM_POS[i];
 	}
 	DEBUG_OUTPUT << "]";
 
 	//Writing the ONG points:
 	DEBUG_OUTPUT << "ONG" << "{";
-	DEBUG_OUTPUT << "points" << (int) ONG.size();
+	DEBUG_OUTPUT << "points" << (int)ONG.size();
 	DEBUG_OUTPUT << "x_y_coordinates" << "[:";
 	//ONG have to be exported in an order that reflects their index on M:
 	//NOTE: Unfortunately ONG_size was was defined as Size ONG_size(ngrid_x, ngrid_y); so width and height are a bit confusing. FIXME.
@@ -2786,9 +2862,9 @@ void LocoMouse::exportDebugVariables() {
 
 	//Writing the ONG_top points:
 	DEBUG_OUTPUT << "ONG_top" << "{";
-	DEBUG_OUTPUT << "points" << (int) ONG_SIDE.size();
+	DEBUG_OUTPUT << "points" << (int)ONG_SIDE.size();
 	DEBUG_OUTPUT << "z_coordinates" << "[:";
-	
+
 	for (unsigned int i = 0; i < ONG_SIDE.size(); i++) {
 		DEBUG_OUTPUT << (int)ONG_SIDE[i];
 	}
@@ -3034,7 +3110,7 @@ LocoMouse_Model::LocoMouse_Model(std::string file_name) {
 	//Read matrices:
 	//FIXME: Find a way to throw an exception here!
 	model_file["modelPaw_top"] >> w_paw_t;
-	if (w_paw_t.empty()) { 
+	if (w_paw_t.empty()) {
 		model_file.release();
 		throw std::invalid_argument(Stream_Formatter() << "Error: modelPaw_top cannot be empty." << file_name << '\n');
 	};
@@ -3263,20 +3339,20 @@ void histogramMatching(cv::Mat &I, const cv::Mat& cumsum_ref) {
 	//hist = hist / (I.cols*I.rows);
 
 	//cv::Mat Icumsum = cv::Mat::zeros(1, 256, hist.type());
-	
-	
+
+
 
 	////It seems hist is column-wise which can have problems if we assume its continuous. Better access with .at
 	//pIcumsum[0] = hist.at<float>(0);
 	//for (int i = 1; i < 256; ++i) {
 	//	pIcumsum[i] = pIcumsum[i - 1] + hist.at<float>(i);
 	//}
-	
+
 	cv::Mat lookupTable = cv::Mat::zeros(1, 256, CV_8UC1);
 	uchar* pLT = lookupTable.ptr<uchar>(0);
 	const float* pRefcumsum = cumsum_ref.ptr<float>(0);
 	float* pIcumsum = Icumsum.ptr<float>(0);
-	
+
 
 	int current_j_init = 0;
 	for (int i = 0; i < 256; ++i) {

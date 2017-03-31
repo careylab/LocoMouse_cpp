@@ -54,7 +54,9 @@ std::string LocoMouse_ParseInputs::stripFileName(const std::string& s) {
 
 
 LocoMouse_ParseInputs::LocoMouse_ParseInputs(int argc, char* argv[]) {
-
+	/*
+	* Simple parsing of the inputs to the code. This is to simplify the constructors of different methods.
+	*/
 
 
 	if (argc != 9) {

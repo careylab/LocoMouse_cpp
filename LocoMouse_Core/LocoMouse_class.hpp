@@ -72,7 +72,7 @@ public:
 	int mode_int = 0;
 	int use_reference_image = 0;
 	int transform_gray_values = 0;
-	int user_provided_bb = 0;
+	int use_provided_bb = 0;
 
 	//To read from inputs:
 	std::string REF_PATH = "./";
@@ -92,15 +92,15 @@ public:
 	const unsigned int N_PAW_PERMUTATIONS = 24;
 	const cv::Mat PAW_PERMUTATIONS = (cv::Mat_<int>(4, N_PAW_PERMUTATIONS) << 3, 2, 1, 0, 3, 2, 0, 1, 3, 1, 2, 0, 3, 1, 0, 2, 3, 0, 1, 2, 3, 0, 2, 1, 2, 3, 1, 0, 2, 3, 0, 1, 2, 1, 3, 0, 2, 1, 0, 3, 2, 0, 1, 3, 2, 0, 3, 1, 1, 2, 3, 0, 1, 2, 0, 3, 1, 3, 2, 0, 1, 3, 0, 2, 1, 0, 3, 2, 1, 0, 2, 3, 0, 2, 1, 3, 0, 2, 3, 1, 0, 1, 2, 3, 0, 1, 3, 2, 0, 3, 1, 2, 0, 3, 2, 1);
 	cv::Mat REF_CDF_GLT = cv::Mat::zeros(1, 256, CV_32FC1); //Matrix used to store the normalized CDF or the Gray Level transformation.
+	cv::Rect BB_USER_SIDE, BB_USER_BOTTOM;
 
 	//Constructors:
 	LocoMouse_Parameters();
 	LocoMouse_Parameters(std::string config_file_name);
 
 	//Assignment:
-	LocoMouse_Parameters& operator=(LocoMouse_Parameters &&P); //move assignment?
+	LocoMouse_Parameters& operator=(LocoMouse_Parameters &&P); //move assignment
 	//LocoMouse_Parameters& operator=(const LocoMouse_Parameters &P); //copy assignment?
-
 
 	//Destructor:
 	//~LocoMouse_Parameters();
@@ -306,6 +306,8 @@ public:
 	virtual void readFrame(); //Reads and processes next frame into I
 	
 	void readFrame(cv::Mat& I); //Reads and processes next frame into provided matrix.
+
+	virtual void getBoundingBox();//Computes the mouse position and bounding box along the video.
 
 	virtual void computeBoundingBox(); //Computes mouse position and bounding box along the video
 	

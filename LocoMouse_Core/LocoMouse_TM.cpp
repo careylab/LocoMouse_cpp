@@ -43,7 +43,6 @@ void LocoMouse_TM::computeBoundingBox() {
 	}
 
 
-
 	for (unsigned int i_frames = 0; i_frames < N_FRAMES; ++i_frames) {
 		
 		LocoMouse::readFrame(I); //Reading image using the base-class method.
