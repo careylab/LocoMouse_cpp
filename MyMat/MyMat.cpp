@@ -370,7 +370,7 @@ double MATSPARSE::get(int irow, int icol) {
 
 		for (int i = 0; i < n_rows_per_col; ++i) {
 			if (Ir[Jc[icol] + i] == irow) {
-				val = Pr[Jc[icol] + irow];
+				val = Pr[Jc[icol] + i];
 			}
 		}
 
