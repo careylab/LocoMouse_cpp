@@ -918,19 +918,6 @@ void LocoMouse::computeUnaryCostsBottom() {
 	//Compute Unary potentials:
 	UNARY_BOTTOM_PAW.push_back(unaryCostBox(CANDIDATES_BOTTOM_PAW.back(), BB_BOTTOM_MOUSE, LM_PARAMS.PRIOR_PAW));
 
-	if (CURRENT_FRAME == 0) {
-
-		imwrite("I_bb_bottom.png", I_BOTTOM_MOUSE);
-		ofstream debug_hf; debug_hf.open("debug_hf.txt");
-		for (unsigned int i = 0; i < CANDIDATES_BOTTOM_PAW[0].size(); i++) {
-			debug_hf << CANDIDATES_BOTTOM_PAW[0][i] << std::endl;
-		}
-		debug_hf << UNARY_BOTTOM_PAW[0];
-		debug_hf.close();
-
-	}
-
-
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Bottom Paw done. " << std::endl;
 	}
