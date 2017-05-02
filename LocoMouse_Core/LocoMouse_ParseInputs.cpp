@@ -69,6 +69,9 @@ LocoMouse_ParseInputs::LocoMouse_ParseInputs(int argc, char* argv[]) {
 		
 		configurePath(argv[0]);
 
+		//configurePath needs to have VIDEO_FILE defined beforehand. But in doing so it sets filestem wrong...
+		FILE_STEM = "L7Y9_control1_L";
+				
 		CONFIG_FILE = REF_PATH + "config.yml";
 		VIDEO_FILE = REF_PATH + "L7Y9_control1_L.avi";
 		BKG_FILE = REF_PATH + "L7Y9_control1_L.png";

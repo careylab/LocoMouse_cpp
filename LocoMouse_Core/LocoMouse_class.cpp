@@ -886,7 +886,6 @@ void LocoMouse::computeUnaryCostsBottom() {
 
 	//Compute Unary potentials:
 	UNARY_BOTTOM_PAW.push_back(unaryCostBox(CANDIDATES_BOTTOM_PAW.back(), BB_BOTTOM_MOUSE, LM_PARAMS.PRIOR_PAW));
-	
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Bottom Paw done. " << std::endl;
