@@ -249,7 +249,7 @@ protected:
 
 	void validateImageVideoSize();
 
-	void configurePath();
+	//void configurePath();
 
 	void correctImage(cv::Mat& Iin, cv::Mat& Iout);
 
@@ -333,9 +333,9 @@ public:
 
 	void computeSideTracks(); //Computes the best bottom view tracks based on the side view tracks.
 
-	void computeTracks(); //Computes the final trajectories for the bottom and side views.
+	//void computeTracks(); //Computes the final trajectories for the bottom and side views.
 
-	void exportFeatureTracks();
+	//void exportFeatureTracks();
 
 	void exportResults();
 
@@ -400,7 +400,7 @@ private:
 	std::stringstream stream_;
 
 	Stream_Formatter(const Stream_Formatter &);
-	Stream_Formatter & operator = (Stream_Formatter &);
+	Stream_Formatter & operator= (Stream_Formatter &);
 };
 
 //Auxiliary functions:

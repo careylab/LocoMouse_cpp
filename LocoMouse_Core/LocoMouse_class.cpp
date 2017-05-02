@@ -585,38 +585,7 @@ void LocoMouse::validateImageVideoSize() {
 
 }
 
-// void LocoMouse::configurePath() {
 
-// #ifdef _WIN32
-// 	//Needed for path manipulation on windows 
-// 	char path_buffer[_MAX_PATH];
-// 	char drive[_MAX_DRIVE];
-// 	char dir[_MAX_DIR];
-// 	char fname[_MAX_FNAME];
-// 	char ext[_MAX_EXT];
-// 	char drive_out[_MAX_DRIVE];
-// 	char dir_out[_MAX_DIR];
-
-// 	_splitpath_s(LM_CALL.c_str(), drive, dir, fname, ext);
-// 	_makepath_s(path_buffer, drive, dir, "", "");
-// 	ref_path = std::string(path_buffer);
-
-// 	OUTPUT_PATH += "\\";
-
-// 	_splitpath_s(VIDEO_FILE.c_str(), drive_out, dir_out, fname, ext);
-// 	output_file = OUTPUT_PATH + "output_" + std::string(fname) + ".yml";
-// 	debug_file = OUTPUT_PATH + "debug_" + std::string(fname) + ".yml";
-// 	debug_text = OUTPUT_PATH + "debug_" + std::string(fname) + ".txt";
-
-// #elif __linux__
-// 	OUTPUT_PATH += "/";
-// 	ref_path = std::string(dirname(LM_CALL.c_str()));
-// 	output_file = OUTPUT_PATH + "/output_" + output_file_name(VIDE_FILE) + "yml";
-// 	debug_file = OUTPUT_PATH + "/debug_" + output_file_name(VIDEO_FILE) + "yml";
-
-// #endif
-
-// }
 void LocoMouse::getBoundingBox() {
 
 	if (LM_PARAMS.use_provided_bb) {
@@ -917,19 +886,7 @@ void LocoMouse::computeUnaryCostsBottom() {
 
 	//Compute Unary potentials:
 	UNARY_BOTTOM_PAW.push_back(unaryCostBox(CANDIDATES_BOTTOM_PAW.back(), BB_BOTTOM_MOUSE, LM_PARAMS.PRIOR_PAW));
-
-	if (CURRENT_FRAME == 0) {
-
-		imwrite("I_bb_bottom.png", I_BOTTOM_MOUSE);
-		ofstream debug_hf; debug_hf.open("debug_hf.txt");
-		for (unsigned int i = 0; i < CANDIDATES_BOTTOM_PAW[0].size(); i++) {
-			debug_hf << CANDIDATES_BOTTOM_PAW[0][i] << std::endl;
-		}
-		debug_hf << UNARY_BOTTOM_PAW[0];
-		debug_hf.close();
-
-	}
-
+	
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Bottom Paw done. " << std::endl;
