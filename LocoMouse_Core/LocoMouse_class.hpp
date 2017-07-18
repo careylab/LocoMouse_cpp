@@ -253,13 +253,16 @@ protected:
 
 	void correctImage(cv::Mat& Iin, cv::Mat& Iout);
 
-	void selectLargestRegion(const Mat &Iin, Mat &Iout);
+	void selectLargestRegion(const cv::Mat &Iin, Mat &Iout);
 
 	vector <Candidate> detectPointCandidatesBottom(cv::Mat& I_VIEW_PAD, cv::Rect &BB_UNPAD, LocoMouse_Feature &M_FEAT, cv::Mat &I_bb_bottom_mask);
 
 	vector <Candidate> detectPointCandidatesSide(cv::Mat& I_VIEW_PAD, cv::Rect &BB_UNPAD, LocoMouse_Feature &M_FEAT, cv::Mat &I_bb_bottom_mask);
 
+	void largestBWAreaObject(cv::Mat &Iin, cv::Mat &Iout);
+	
 	void computeMouseBox(cv::Mat &I_median, cv::Mat &I, cv::Mat &I_side_view, cv::Mat &I_bottom_view, double& bb_x, double& bb_y_bottom, double& bb_y_side, double& bb_width, double& bb_height_bottom, double& bb_height_side, const LocoMouse_Parameters &LM_PARAMS);
+	
 
 	MATSPARSE pairwisePotential(vector<Candidate> &Ci, vector<Candidate> &Cip1, Point_<double> &grid_mapping, double grid_spacing, vector< Point_<double> > &ONGi, Size ONG_size, double max_displacement, double alpha_vel, double pairwise_occluded_cost);
 
@@ -275,15 +278,15 @@ protected:
 
 	void exportLineTracks(std::vector <cv::Mat> Tracks, std::string track_name, int N_line_points);
 
-	vector<P22D> matchViews(const cv::Mat &boolD, const cv::Mat &D_top_weight, const vector<Candidate> &C_b, const vector<Candidate> &C_t, bool vel_check, LocoMouse_Feature &F, const cv::Mat &Ibbb, const cv::Mat &Itbb, const cv::Mat &Ibbb_prev, const cv::Mat &Itbb_prev, const Point_<int> padding_pre_bottom, const Point_<int> padding_pre_side, bool debug);
+	vector<P22D> matchViews(const cv::Mat &boolD, const cv::Mat &D_top_weight, const vector<Candidate> &C_b, const vector<Candidate> &C_t, bool vel_check, LocoMouse_Feature &F, const cv::Mat &Ibbb, const cv::Mat &Itbb, const cv::Mat &Ibbb_prev, const cv::Mat &Itbb_prev, const cv::Point_<int> padding_pre_bottom, const cv::Point_<int> padding_pre_side, bool debug);
 
 	cv::Mat xDist(const vector<Candidate> &P1, const vector <Candidate> &P2);
 
-	vector<P22D> matchingWithVelocityConstraint(vector<Candidate>& Candidates_b, vector<Candidate>& Candidates_t, const cv::Mat& Ibbb, const cv::Mat& Itbb, const cv::Mat& Ibbb_prev, const cv::Mat& Itbbb_prev, const Point_<int> padding_pre_bottom, const Point_<int> padding_pre_side, bool vel_check, LocoMouse_Feature& F, double T, bool debug);
+	vector<P22D> matchingWithVelocityConstraint(vector<Candidate>& Candidates_b, vector<Candidate>& Candidates_t, const cv::Mat& Ibbb, const cv::Mat& Itbb, const cv::Mat& Ibbb_prev, const cv::Mat& Itbbb_prev, const cv::Point_<int> padding_pre_bottom, const cv::Point_<int> padding_pre_side, bool vel_check, LocoMouse_Feature& F, double T, bool debug);
 
 	void computeMouseBoxSize(std::vector<double> &bb_w, std::vector<double> &bb_hb, std::vector<double> &bb_ht, cv::Rect &BB_top, cv::Rect &BB_bottom);
 
-	void cropImage(cv::Mat &Iin, cv::Mat &Iout, cv::Rect BB);
+	//void cropImage(cv::Mat &Iin, cv::Mat &Iout, cv::Rect BB);
 
 	cv::Mat bestSideViewMatch(const cv::Mat& T, const vector< vector<P22D> > &candidates_bottom_top_matched, const vector<uint> &ONG_top, const unsigned int lowest_point, const unsigned int N_features);
 

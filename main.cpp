@@ -35,12 +35,13 @@
 
 int main(int argc, char* argv[]) {
 	double t = (double) getTickCount();
+	int return_val = EXIT_SUCCESS;
 
 	try {
 
 		//Parsing the inputs:
 		LocoMouse_ParseInputs inputs = LocoMouse_ParseInputs(argc, argv);
-		
+
 		//Initialize LocoMouse problem
 		std::unique_ptr<LocoMouse> L = LocoMouse_Initialize(inputs);
 
@@ -92,12 +93,14 @@ int main(int argc, char* argv[]) {
 	}
 	catch (std::invalid_argument e) {
 		std::cout << "Invalid inputs: " << e.what() << std::endl;
+		return_val = EXIT_FAILURE;
 	}
 	catch (std::runtime_error e) {
 		std::cout << "Runtime Error: " << e.what() << std::endl;
+		return_val = EXIT_FAILURE;
 	}
 
 	t = ((double)getTickCount() - t) / getTickFrequency();
 	std::cout << "Total Elapsed time: " << t << "s" << std::endl;
-	return EXIT_SUCCESS;
+	return return_val;
 }

@@ -1,0 +1,10 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/LocoMouse/.vs/LocoMouse/v14
+/LocoMouse/LocoMouse
+/LocoMouse/LocoMouse.VC.VC.opendb
+/LocoMouse/LocoMouse.VC.db
+/LocoMouse/LocoMouse.sln
+/LocoMouse/ipch/LOCOMOUSE-982475eb

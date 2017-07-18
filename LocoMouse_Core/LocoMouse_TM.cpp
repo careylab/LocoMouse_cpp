@@ -12,6 +12,22 @@ LocoMouse_TM::LocoMouse_TM(LocoMouse_ParseInputs INPUTS) : LocoMouse(INPUTS) {
 
 	disk_filter.release();
 
+	if (BB_SIDE_VIEW.width < ZERO_COL_PRE || BB_SIDE_VIEW.width < ZERO_COL_POST) {
+		
+		std::cerr << "BB_SIDE_VIEW: " << BB_SIDE_VIEW << std::endl;
+		std::cerr << "ZERO_COL_PRE, ZERO_COL_POST: " << ZERO_COL_PRE << " " << ZERO_COL_POST << endl;
+		
+		throw::std::invalid_argument("Side View image size is not compatible with the zero_col parameters for the bounding box computations. See the definition of the LocoMouse_TM class.");
+	}
+
+	if (BB_SIDE_VIEW.height < ZERO_ROW_PRE || BB_SIDE_VIEW.height < ZERO_ROW_POST) {
+		std::cerr << "BB_SIDE_VIEW: " << BB_SIDE_VIEW << std::endl;
+		std::cerr << "ZERO_ROW_PRE, ZERO_ROW_POST: " << ZERO_ROW_PRE << " " << ZERO_ROW_POST << endl;
+		
+		throw::std::invalid_argument("Side View image size is not compatible with the zero_row parameters for the bounding box computations. See the definition of the LocoMouse_TM class.");
+	}
+
+
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Initialized a LocoMouse_TM class" << std::endl;
 	}
@@ -35,11 +51,11 @@ void LocoMouse_TM::computeBoundingBox() {
 
 
 	if (LM_PARAMS.LM_DEBUG) {
+		
 		DEBUG_TEXT << "BB_SIDE_VIEW: " << BB_SIDE_VIEW << std::endl;
 		DEBUG_TEXT << "I.size(): " << I.size() << std::endl;
 		DEBUG_TEXT << "I_side_view.size(): " << I_side_view.size() << std::endl;
 		DEBUG_TEXT << "----- Computing the bounding box position per frame: " << std::endl;
-
 	}
 
 
@@ -65,77 +81,88 @@ void LocoMouse_TM::computeBoundingBox() {
 	return;
 }
 
+cv::Mat LocoMouse_TM::bwAreaOpen(cv::Mat &Iin) {
+	//Removes areas with less than MIN_PIXEL_COUNT
+	
+	cv::Mat labels, stats, centroids;
+	uint N_labels = connectedComponentsWithStats(Iin, labels, stats, centroids, LM_PARAMS.conn_comp_connectivity, CV_32S);
+
+	if (LM_PARAMS.LM_DEBUG)
+		DEBUG_TEXT << "Number of connected components found: " << N_labels << "." << std::endl;
+
+	cv::Mat Iout;
+	if (N_labels > 1) {
+		cv::Mat I_temp;
+
+		Iout = Mat::zeros(labels.size(), CV_8UC1);
+
+		//OpenCV assumes the first object to be the background (the largest object?).
+		for (uint i_labels = 1; i_labels < N_labels; ++i_labels) {
+			if (stats.at<uint>(i_labels, CC_STAT_AREA) >= MIN_PIXEL_COUNT) {
+				compare(labels, i_labels, I_temp, CMP_EQ);
+				Iout |= I_temp;//Removing area if less than min_pixel_count
+			}
+		}
+		Iout = Iout / 255;
+	}
+	else {
+		Iout = cv::Mat::zeros(Iin.size(), CV_8UC1);
+	}
+
+	return Iout;
+
+}
+
 
 void LocoMouse_TM::computeMouseBox_DD(cv::Mat &I_SIDE, double& bb_x) {
 
 	//Reading next frame:
 	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "=== computeMouseBox_DD: " << std::endl;
-
+	
 	//NOTE: As we are using this just on the background part, it is ok to modify It directly.
 	imadjust_default(I_SIDE, I_SIDE); //Adjusting constrast by saturating 1% of the data.
-	
+		
 	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "imadjust_default_parameters: Done. " << std::endl;
 
 	//These really are hand-set like this for the TM:
-	I_SIDE.colRange(0, 46).setTo(0);
-	I_SIDE.colRange(760, N_COLS).setTo(0);
-	I_SIDE.rowRange(0, 100).setTo(0);
-	I_SIDE.rowRange(149, I_SIDE.rows).setTo(0);
-	
+	I_SIDE.colRange(0, ZERO_COL_PRE).setTo(0);
+	I_SIDE.colRange(ZERO_COL_POST, N_COLS).setTo(0);
+	I_SIDE.rowRange(0, ZERO_ROW_PRE).setTo(0);
+	I_SIDE.rowRange(ZERO_ROW_POST, I_SIDE.rows).setTo(0);
+		
 	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "Setting regions to zero: Done. " << std::endl;
 
 	Mat I_side_binary;
 	threshold(I_SIDE, I_side_binary, SIDE_THRESHOLD, 1, 0);//MATLAB has the threshold as a percentage. So 1% is 2.55 out of 255 
+
+	I_side_binary = bwAreaOpen(I_side_binary);
+		
+	//If no area we could skip remaining steps.
+
+	filter2D(I_side_binary, I_side_binary, CV_8UC1, DISK_FILTER, Point(-1, -1), 0, BORDER_REPLICATE);
+
+	//Perform imfill, which doesn't exist either.
+	imfill(I_side_binary, I_side_binary);
 	
-	//FIXME: Mouse limits using Connected Components. Move all of this into a function for clarity. 
-	Mat labels, stats, centroids;
-	uint N_labels = connectedComponentsWithStats(I_side_binary, labels, stats, centroids, LM_PARAMS.conn_comp_connectivity, CV_32S);
+	//Get the BB of the white region.
+	cv::Mat Row_top;
+	reduce(I_side_binary, Row_top, 0, CV_REDUCE_SUM, CV_32SC1);
+
+	int lims_row_top[2];
+
+	//Compute and assign values to bounding box:
+	//FIXME: Handle the empty image case. Perform the check inside the function and return a bool. Check after each run if the result was valid.
+	//Row_* marks x and with; Col_* marks y and height.
+	firstLastOverT(Row_top, N_COLS, lims_row_top, LM_PARAMS.min_pixel_visible);
+
+	//Assigning the values to the bounding box vectors:
+	bb_x = (double)lims_row_top[1];
 	
 	if (LM_PARAMS.LM_DEBUG)
-		DEBUG_TEXT << "Number of connected components found: " << N_labels << "." << std::endl;
-
-
-	if (N_labels > 1) {
-		Mat I_temp;
-
-		I_side_binary = Mat::zeros(labels.size(), CV_8UC1);
-		//OpenCV assumes the first object to be the background (the largest object?).
-		for (uint i_labels = 1; i_labels < N_labels; ++i_labels) {
-			if (stats.at<uint>(i_labels, CC_STAT_AREA) >= MIN_PIXEL_COUNT) {
-				compare(labels, i_labels, I_temp, CMP_EQ);
-				I_side_binary = I_side_binary | I_temp;//Removing area if less than min_pixel_count
-			}
-		}
-		I_side_binary = I_side_binary / 255;
-		
-		//Filter with the disk filter. To replicate results, load filter from MATLAB.
-		filter2D(I_side_binary, I_side_binary, CV_8UC1, DISK_FILTER, Point(-1, -1), 0, BORDER_REPLICATE);
-				
-		//Perform imfill, which doesn't exist either.
-		imfill(I_side_binary, I_side_binary);
-		
-		//Get the BB of the white region.
-		cv::Mat Row_top;
-		reduce(I_side_binary, Row_top, 0, CV_REDUCE_SUM, CV_32SC1);
-
-		int lims_row_top[2];
-
-		//Compute and assign values to bounding box:
-		//FIXME: Handle the empty image case. Perform the check inside the function and return a bool. Check after each run if the result was valid.
-		//Row_* marks x and with; Col_* marks y and height.
-		firstLastOverT(Row_top, N_COLS, lims_row_top, LM_PARAMS.min_pixel_visible);
-		
-
-		//Assigning the values to the bounding box vectors:
-		bb_x = (double) lims_row_top[1];
-
-		if (LM_PARAMS.LM_DEBUG)
-			DEBUG_TEXT << "Final bb_x location: " << bb_x << "." << std::endl;
-
-	}
+		DEBUG_TEXT << "Final bb_x location: " << bb_x << "." << std::endl;
 }
 
 void LocoMouse_TM::readFrame() {

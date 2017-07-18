@@ -1,6 +1,17 @@
 #include "MyMat.hpp"
 
-//class MyMat:
+/*
+* Class MyMat
+* 
+* Simple implementation of a matrix with the purpose of storing values.
+*
+* This exists as an exercise in classes but also to better integrate with existing code. 
+* cv::Mat could probably replace this if we provide a pointer to the double elements inside match2nd.
+*/
+
+/* CONSTRUCTORS*/
+
+// Default constructor
 MyMat::MyMat() {
 	nrows = 0;
 	ncols = 0;

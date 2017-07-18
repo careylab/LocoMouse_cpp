@@ -9,8 +9,6 @@ New classes must be added here for inclusion on the main program:
 
 Author: Joao Fayad (joaofayad@gmail.com)
 
-
-
 */
 
 #ifndef __LocoMouse_Methods_H_INCLUDED__
@@ -20,8 +18,7 @@ Author: Joao Fayad (joaofayad@gmail.com)
 
 //Include new modifications:
 #include "LocoMouse_TM.hpp"
-//#include "LocoMouse_HF.hpp"
-//#include "LocoMouse_RotaryTM.hpp
+#include "LocoMouse_TM_DE.hpp"
 
 
 std::unique_ptr<LocoMouse> LocoMouse_Initialize(LocoMouse_ParseInputs INPUTS);

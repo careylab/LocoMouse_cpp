@@ -106,7 +106,6 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 	config_file["alpha_vel"] >> alpha_vel; //Relative term for the velocity costs on the match2nd tracking algorithm.
 	if (alpha_vel < 0) {
 		error_message += "alpha_vel must be non-negative. Was " + std::to_string(alpha_vel) + ".";
-		std::cout << "Error message is: " << error_message << std::endl;
 		throw std::invalid_argument(error_message);
 	}
 
@@ -150,23 +149,6 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 	double* Wptr = W.ptr<double>(N_paws);
 	PRIOR_SNOUT.push_back(LocoMouse_LocationPrior(Wptr[0], Wptr[1], Wptr[2], Wptr[3], Wptr[4], Wptr[5], Wptr[6]));
 
-	//config_file["use_reference_image_brightness"] >> use_reference_image;
-	//
-	//if (use_reference_image) {
-	//	
-	//	std::string ref_name;
-	//	config_file["reference_image_path"] >> ref_name;
-	//	std::string ref_image_path = REF_PATH + "/" + ref_name;
-	//	
-	//	cv::Mat Iref = cv::imread(ref_image_path);
-	//	if (!Iref.data) {
-	//		//FIXME: Return proper exception.
-	//		std::cout << "Failed to read reference image." << std::endl;
-	//	}
-	//	
-	//	computeNormalizedCDF(Iref, REF_CDF);
-	//}
-
 	config_file["transform_gray_values"] >> transform_gray_values;
 	config_file["use_reference_image_brightness"] >> use_reference_image;
 
@@ -203,7 +185,8 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 					both_true = false;
 				}
 				else {
-					//FIXME: Throw exception as we failed to read the provided image.
+					error_message += "Failed to open reference image: " + reference_image_name + ".";
+					throw std::invalid_argument(error_message);
 				}
 			}
 		}
@@ -215,8 +198,15 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 		config_file["gray_value_transformation"] >> REF_CDF_GLT;
 
 		if (!REF_CDF_GLT.data) {
-			//FIXME: Throw exception!
+			error_message += "Could not load the gray level transformation from the config file.";
+			throw std::invalid_argument(error_message);
 		}
+
+		if ((REF_CDF_GLT.rows != 1) || (REF_CDF_GLT.cols != 256)) {
+			error_message += "The gray level transformation must be a 1x256 matrix, was " + std::to_string(REF_CDF_GLT.rows) + "x" + std::to_string(REF_CDF_GLT.cols) + ".";
+			throw std::invalid_argument(error_message);
+		}
+
 
 	}
 
@@ -333,8 +323,11 @@ LocoMouse::LocoMouse(LocoMouse_ParseInputs INPUTS) {
 
 	//FIXME: Throw exceptions if any of these fail!
 	LM_PARAMS = LocoMouse_Parameters(CONFIG_FILE);
+	
 	loadVideo();
+	
 	loadBackground();
+		
 	loadCalibration();
 
 	validateImageVideoSize();
@@ -342,9 +335,7 @@ LocoMouse::LocoMouse(LocoMouse_ParseInputs INPUTS) {
 	M = LocoMouse_Model(MODEL_FILE);
 
 	loadFlip();
-
-	//configurePath();
-
+	
 	//Initializing other variables that depend on N_FRAMES
 	BB_X_POS.reserve(N_FRAMES);
 	BB_Y_BOTTOM_POS.reserve(N_FRAMES);
@@ -360,11 +351,9 @@ LocoMouse::LocoMouse(LocoMouse_ParseInputs INPUTS) {
 	}
 
 	if (LM_PARAMS.LM_DEBUG) {
-
 		DEBUG_TEXT.open(debug_text);
-
 	}
-
+	
 	//FIXME: Check how to deal with the need for this file. Hardcode it?
 	//		//Behaviour mode:
 	//		//cv::Mat H;
@@ -705,9 +694,21 @@ void LocoMouse::initializeFeatureLoop() {
 
 	*/
 
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "===== Preparing Feature Tracking Loop: " << std::endl;
+		DEBUG_TEXT << "BB_SIDE_MOUSE: " << BB_SIDE_MOUSE << std::endl;
+		DEBUG_TEXT << "BB_BOTTOM_MOUSE: " << BB_BOTTOM_MOUSE << std::endl;
+		DEBUG_TEXT << "M_size_pre_side().height, M_size_pre_bottom().height: " << M.size_pre_side().height << " " << M.size_pre_bottom().height  << std::endl;
+		DEBUG_TEXT << "M_size_pre_side().width, M_size_pre_bottom().width: " << M.size_pre_side().width<< " " << M.size_pre_bottom().width<< std::endl;
+	}
+
+
 	//Initializing I according to the newly computed bounding boxes and pad sizes:
 	std::vector <int> zero_pad_rows_pre_vec = { BB_SIDE_MOUSE.height , M.size_pre_side().height , M.size_pre_bottom().height };
 	std::vector <int> zero_pad_cols_pre_vec = { BB_BOTTOM_MOUSE.width, M.size_pre_side().width, M.size_pre_bottom().width };
+
+
+
 
 	PAD_PRE_ROWS = *std::max_element(zero_pad_rows_pre_vec.begin(), zero_pad_rows_pre_vec.end());
 	PAD_POST_ROWS = (M.size_post_bottom().height > M.size_post_side().height) ? M.size_post_bottom().height : M.size_post_side().height;
@@ -729,6 +730,15 @@ void LocoMouse::initializeFeatureLoop() {
 	//Unpad boxes:
 	BB_UNPAD_MOUSE_BOTTOM = cv::Rect(M.size_pre_bottom().width, M.size_pre_bottom().height, BB_BOTTOM_MOUSE.width, BB_BOTTOM_MOUSE.height);
 	BB_UNPAD_MOUSE_SIDE = cv::Rect(M.size_pre_side().width, M.size_pre_side().height, BB_SIDE_MOUSE.width, BB_SIDE_MOUSE.height);
+
+	if (LM_PARAMS.LM_DEBUG) {
+
+		DEBUG_TEXT << "I_PAD: " << I_PAD.size() << std::endl;
+		DEBUG_TEXT << "I_UNPAD: " << I_UNPAD << std::endl;
+		DEBUG_TEXT << "BB_BOTTOM_MOUSE_PAD, UNPAD: " << BB_BOTTOM_MOUSE_PAD  << " " << BB_UNPAD_MOUSE_BOTTOM << std::endl;
+		DEBUG_TEXT << "BB_SIDE_MOUSE_PAD, UNPAD: " << BB_SIDE_MOUSE_PAD << " " << BB_UNPAD_MOUSE_SIDE << std::endl;
+	}
+
 
 	//Initializing Tail Boxes:
 	TRACKS_TAIL.reserve(N_FRAMES);
@@ -787,6 +797,10 @@ void LocoMouse::initializeFeatureLoop() {
 	V.set(CV_CAP_PROP_POS_FRAMES, 0);
 	CURRENT_FRAME = -1; //Frame index is incremented on read;
 
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "===== Done " << std::endl;
+	}
+
 }
 
 void LocoMouse::detectBottomCandidates() {
@@ -811,10 +825,15 @@ void LocoMouse::detectBottomCandidates() {
 	//Detecting Paw Candidates:
 	CANDIDATES_BOTTOM_PAW.push_back(detectPointCandidatesBottom(I_BOTTOM_MOUSE_PAD, BB_UNPAD_MOUSE_BOTTOM, M.paw, I_bb_bottom_mask));
 
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "Detected " << CANDIDATES_BOTTOM_PAW.back().size() << " paw candidates." << std::endl;
+	}
+
 	//Detecting Snout Candidates:
 	CANDIDATES_BOTTOM_SNOUT.push_back(detectPointCandidatesBottom(I_BOTTOM_MOUSE_PAD, BB_UNPAD_MOUSE_BOTTOM, M.snout, I_bb_bottom_mask));
 
 	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "Detected " << CANDIDATES_BOTTOM_SNOUT.back().size() << " snout candidates." << std::endl;
 		DEBUG_TEXT << "=== Done " << std::endl;
 	}
 
@@ -835,10 +854,18 @@ void LocoMouse::detectSideCandidates() {
 	//Detecting Paw Candidates:
 	if (CANDIDATES_BOTTOM_PAW.back().size() > 0)
 		CANDIDATES_SIDE_PAW.push_back(detectPointCandidatesSide(I_SIDE_MOUSE_PAD, BB_UNPAD_MOUSE_SIDE, M.paw, I_bb_side_mask));
+	else {
+		std::vector<Candidate> dummy; dummy.resize(0);
+		CANDIDATES_SIDE_PAW.push_back(dummy);
+	}
 
 	//Detecting Snout Candidates:
 	if (CANDIDATES_BOTTOM_SNOUT.back().size() > 0)
 		CANDIDATES_SIDE_SNOUT.push_back(detectPointCandidatesSide(I_SIDE_MOUSE_PAD, BB_UNPAD_MOUSE_SIDE, M.snout, I_bb_side_mask));
+	else {
+		std::vector<Candidate> dummy; dummy.resize(0);
+		CANDIDATES_SIDE_SNOUT.push_back(dummy);
+	}
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "=== Done " << std::endl;
@@ -926,6 +953,33 @@ void LocoMouse::computePairwiseCostsBottom() {
 
 }
 
+void LocoMouse::largestBWAreaObject(cv::Mat &Iin, cv::Mat &Iout) {
+	//Largest contiguous area given a binary image.
+
+	cv::Mat labels, stats, centroids;
+
+	uint N_labels = cv::connectedComponentsWithStats(Iin, labels, stats, centroids, LM_PARAMS.conn_comp_connectivity, CV_32S);
+
+	if (N_labels > 0) {
+
+		//OpenCV assumes the first object to be the background (the largest?).
+		uint largest_object = 1;
+		uint largest_object_area = stats.at<uint>(1, cv::CC_STAT_AREA);
+		for (uint i_labels = 2; i_labels < N_labels; ++i_labels) {
+			if (stats.at<uint>(i_labels, cv::CC_STAT_AREA) > largest_object_area) {
+				largest_object = i_labels;
+				largest_object_area = stats.at<uint>(i_labels, cv::CC_STAT_AREA);
+			}
+		}
+		//Selecting largest object:
+		cv::compare(labels, largest_object, Iout, cv::CMP_EQ);
+	}
+	else {
+		cv::Mat Ires = cv::Mat::zeros(Iin.size(), Iin.type());
+	}
+
+}
+
 void LocoMouse::computeMouseBox(cv::Mat &I_median, cv::Mat &I, cv::Mat &I_side_view, cv::Mat &I_bottom_view, double& bb_x, double& bb_y_bottom, double& bb_y_side, double& bb_width, double& bb_height_bottom, double& bb_height_side, const LocoMouse_Parameters &LM_PARAMS) {
 	//Compute the bounding box of the mouse for the overground.
 
@@ -935,38 +989,10 @@ void LocoMouse::computeMouseBox(cv::Mat &I_median, cv::Mat &I, cv::Mat &I_side_v
 	//Thresholding
 	cv::threshold(I, I, 2.55, 1, 0); //1% of 255;
 
-	//FIXME: Mouse limits using Connected Components. Move all of this into a function for clarity. 
-	cv::Mat labels, stats, centroids;
+	largestBWAreaObject(I_side_view, I_side_view);
 
-	uint N_labels = connectedComponentsWithStats(I_side_view, labels, stats, centroids, LM_PARAMS.conn_comp_connectivity, CV_32S);
-
-	//OpenCV assumes the first object to be the background.t
-	uint largest_object = 1;
-	uint largest_object_area = stats.at<uint>(1, cv::CC_STAT_AREA);
-	for (uint i_labels = 2; i_labels < N_labels; ++i_labels) {
-		if (stats.at<uint>(i_labels, cv::CC_STAT_AREA) > largest_object_area) {
-			largest_object = i_labels;
-			largest_object_area = stats.at<uint>(i_labels, cv::CC_STAT_AREA);
-		}
-	}
-	//Selecting largest object:
-	compare(labels, largest_object, I_side_view, cv::CMP_EQ);
-
-	//Repeating for bottom view:
-	N_labels = connectedComponentsWithStats(I_bottom_view, labels, stats, centroids, LM_PARAMS.conn_comp_connectivity, CV_32S);
-
-	largest_object = 1;
-	largest_object_area = stats.at<uint>(1, cv::CC_STAT_AREA);
-	for (uint i_labels = 2; i_labels < N_labels; ++i_labels) {
-		if (stats.at<uint>(i_labels, cv::CC_STAT_AREA) > largest_object_area) {
-			largest_object = i_labels;
-			largest_object_area = stats.at<uint>(i_labels, cv::CC_STAT_AREA);
-		}
-	}
-
-	//Selecting largest object:
-	compare(labels, largest_object, I_bottom_view, cv::CMP_EQ);
-
+	largestBWAreaObject(I_bottom_view, I_bottom_view);
+	
 	//Checking for first and last positions to exceed min_pixel_visible:
 	cv::Mat Row_top, Row_bottom, Col_top, Col_bottom;
 
@@ -1015,7 +1041,7 @@ void LocoMouse::matchBottomSideCandidates() {
 	Point_<int> padding_pre_bottom = Point_<int>(M.size_pre_bottom().width, M.size_pre_bottom().height);
 	Point_<int> padding_pre_side = Point_<int>(M.size_pre_side().width, M.size_pre_side().height);
 
-	vector <P22D> P = matchingWithVelocityConstraint(CANDIDATES_BOTTOM_PAW.back(), CANDIDATES_SIDE_PAW.back(), I_BOTTOM_MOUSE_PAD, I_SIDE_MOUSE_PAD, I_BOTTOM_MOUSE_PAD_PREV, I_SIDE_MOUSE_PAD_PREV, padding_pre_bottom, padding_pre_side, CURRENT_FRAME > 0, M.paw, LM_PARAMS.top_bottom_min_overlap, CURRENT_FRAME == 161);
+	vector <P22D> P = matchingWithVelocityConstraint(CANDIDATES_BOTTOM_PAW.back(), CANDIDATES_SIDE_PAW.back(), I_BOTTOM_MOUSE_PAD, I_SIDE_MOUSE_PAD, I_BOTTOM_MOUSE_PAD_PREV, I_SIDE_MOUSE_PAD_PREV, padding_pre_bottom, padding_pre_side, CURRENT_FRAME > 0, M.paw, LM_PARAMS.top_bottom_min_overlap, false);
 	CANDIDATES_MATCHED_VIEWS_PAW.push_back(P);
 
 	P = matchingWithVelocityConstraint(CANDIDATES_BOTTOM_SNOUT.back(), CANDIDATES_SIDE_SNOUT.back(), I_BOTTOM_MOUSE_PAD, I_SIDE_MOUSE_PAD, I_BOTTOM_MOUSE_PAD_PREV, I_SIDE_MOUSE_PAD_PREV, padding_pre_bottom, padding_pre_side, CURRENT_FRAME > 0, M.snout, LM_PARAMS.top_bottom_min_overlap, false);
@@ -1029,7 +1055,7 @@ void LocoMouse::matchBottomSideCandidates() {
 
 };
 
-vector<P22D> LocoMouse::matchingWithVelocityConstraint(vector<Candidate>& Candidates_b, vector<Candidate>& Candidates_t, const Mat& Ibbb, const Mat& Itbb, const Mat& Ibbb_prev, const Mat& Itbbb_prev, const Point_<int> padding_pre_bottom, const Point_<int> padding_pre_side, bool vel_check, LocoMouse_Feature& F, double T, bool debug) {
+vector<P22D> LocoMouse::matchingWithVelocityConstraint(vector<Candidate>& Candidates_b, vector<Candidate>& Candidates_t, const cv::Mat& Ibbb, const cv::Mat& Itbb, const cv::Mat& Ibbb_prev, const cv::Mat& Itbbb_prev, const Point_<int> padding_pre_bottom, const Point_<int> padding_pre_side, bool vel_check, LocoMouse_Feature& F, double T, bool debug) {
 	// BOXPAIRINGS Pairs boxes that overlap at least T horizontally.
 	//
 	// INPUT :
@@ -1049,17 +1075,24 @@ vector<P22D> LocoMouse::matchingWithVelocityConstraint(vector<Candidate>& Candid
 
 	//FIXME: We cannot pass the whole model anymore as it would make the function feature specific...
 
+	if (LM_PARAMS.LM_DEBUG)
+		DEBUG_TEXT << "matchingWithVelocityConstraint" << std::endl;
+
+
 	int ovlp = (F.size_bottom().width * (1 - T));
 	int N_bottom = Candidates_b.size();
 	int N_top = Candidates_t.size();
 	vector<P22D> Candidates_bt;
 	if (N_bottom == 0) {
+		if (LM_PARAMS.LM_DEBUG)
+			DEBUG_TEXT << "N_bottom == 0, returned." << std::endl;
+
 		return Candidates_bt;
 	}
 
 	//Calculate Pairwise Distance Matrix:
 	//It would be faster to calculate distances only if motion constraints are valid. But motion constraints are not reliable,thus only if multiple matches exist should they be applied.
-	Mat Distances, D_top_weight, boolD;
+	cv::Mat Distances, D_top_weight, boolD;
 	if (N_top > 0) {
 		Distances = xDist(Candidates_b, Candidates_t);
 
@@ -1108,13 +1141,21 @@ cv::Mat LocoMouse::xDist(const vector<Candidate> &P1, const vector <Candidate> &
 	return D;
 }
 
-vector<P22D> LocoMouse::matchViews(const Mat &boolD, const Mat &D_top_weight, const vector<Candidate> &C_b, const vector<Candidate> &C_t, bool vel_check, LocoMouse_Feature &F, const Mat &Ibbb, const Mat &Itbb, const Mat &Ibbb_prev, const Mat &Itbb_prev, const Point_<int> padding_pre_bottom, const Point_<int> padding_pre_side, bool debug) {
+vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_top_weight, const vector<Candidate> &C_b, const vector<Candidate> &C_t, bool vel_check, LocoMouse_Feature &F, const cv::Mat &Ibbb, const cv::Mat &Itbb, const cv::Mat &Ibbb_prev, const cv::Mat &Itbb_prev, const cv::Point_<int> padding_pre_bottom, const cv::Point_<int> padding_pre_side, bool debug) {
 	//FIXME: VERY IMPORTANT - I'm assuming there are not more than 255 candidates per match. This is a very safe bet, as if it happens the data is wrong for sure.
+
+	if (LM_PARAMS.LM_DEBUG)
+		DEBUG_TEXT << "matchViews" << std::endl;
+
 
 	vector<P22D> C;
 
 	int N_top = C_t.size();
 	int N_bottom = C_b.size();
+
+	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "N_bottom, N_top: " << N_bottom << " " << N_top << std::endl;
+	}
 
 	if (N_bottom == 0) {
 		return C;
@@ -1129,26 +1170,33 @@ vector<P22D> LocoMouse::matchViews(const Mat &boolD, const Mat &D_top_weight, co
 	vector<bool> need_to_check(N_top, true);
 	vector<bool> moving_t(N_top, false);
 
-	Mat M_check_velocity, M_t_per_b_match;
+	cv::Mat M_check_velocity, M_t_per_b_match;
 	float *top_per_bottom_match = 0, *bottom_per_top_match = 0;
 
 	if (N_top > 0) {
 		//Reduction of D to find how many bottom candidates correspond to each top candidate.
 
-		reduce(boolD, M_check_velocity, 0, CV_REDUCE_SUM, CV_32FC1);
+		cv::reduce(boolD, M_check_velocity, 0, CV_REDUCE_SUM, CV_32FC1);
 		bottom_per_top_match = M_check_velocity.ptr<float>(0);
 
 		//Reduction of D to find how many top candidates correspond to each bottom candidate.
 
-		reduce(boolD, M_t_per_b_match, 1, CV_REDUCE_SUM, CV_32FC1);
+		cv::reduce(boolD, M_t_per_b_match, 1, CV_REDUCE_SUM, CV_32FC1);
 		top_per_bottom_match = M_t_per_b_match.ptr<float>(0);
 
 	}
 
 	for (int i_bottom = 0; i_bottom < N_bottom; i_bottom++) {
 
+		if (LM_PARAMS.LM_DEBUG) {
+			DEBUG_TEXT << "i_bottom: " << i_bottom << std::endl;
+		}
+
 		//No top candidates at all:
 		if (N_top == 0) {
+			if (LM_PARAMS.LM_DEBUG) {
+				DEBUG_TEXT << "N_top is 0." << std::endl;
+			}
 			C.push_back(P22D(C_b[i_bottom], Candidate(-1, -1, -1)));
 			continue;
 		}
@@ -1156,6 +1204,11 @@ vector<P22D> LocoMouse::matchViews(const Mat &boolD, const Mat &D_top_weight, co
 		if (top_per_bottom_match[i_bottom] == 0) {
 			//No match at the top:
 			//Place the bottom candidate with no top correspondence
+
+			if (LM_PARAMS.LM_DEBUG) {
+				DEBUG_TEXT << "No matches at the top." << std::endl;
+			}
+
 			C.push_back(P22D(C_b[i_bottom], Candidate(-1, -1, -1)));
 		}
 
@@ -1172,7 +1225,15 @@ vector<P22D> LocoMouse::matchViews(const Mat &boolD, const Mat &D_top_weight, co
 			const uchar* pD = boolD.ptr<uchar>(i_bottom);
 			const double* pDTW = D_top_weight.ptr<double>(i_bottom);
 
+			if (LM_PARAMS.LM_DEBUG) {
+				DEBUG_TEXT << "Multiple matches, looping." << std::endl;
+			}
+
 			for (int i_top = 0; i_top < N_top; i_top++) {
+
+				if (LM_PARAMS.LM_DEBUG) {
+					DEBUG_TEXT << "i_top: " << i_top << std::endl;
+				}
 
 				if (pD[i_top] < 1)
 					continue;
@@ -1227,7 +1288,7 @@ vector<P22D> LocoMouse::matchViews(const Mat &boolD, const Mat &D_top_weight, co
 	return C;
 }
 
-bool LocoMouse::checkVelCriterion(const Mat& I, const Mat& I_prev, const Rect& im_box, int box_area, double alpha, double T) {
+bool LocoMouse::checkVelCriterion(const cv::Mat& I, const cv::Mat& I_prev, const cv::Rect& im_box, int box_area, double alpha, double T) {
 
 	cv::Mat S;
 	cv::subtract(I(im_box), I_prev(im_box), S, noArray(), CV_8UC1);
@@ -1389,15 +1450,17 @@ void LocoMouse::cropBoundingBox() {
 
 	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "=== cropBoundingBox:" << std::endl;
-
+	
 	//Moving the padded boxes:
 	//The position of the BR corner is computed on the real image coordinates. To get the padding box we must add the I_PAD offsets and remove (BB_*_MOUSE.width + pad_pre) which is equivalent to (BB_*_MOUSE_PAD.width - pad_post).
 	BB_BOTTOM_MOUSE_PAD.x = (BB_X_POS[CURRENT_FRAME] + PAD_PRE_COLS) - (BB_BOTTOM_MOUSE_PAD.width - M.size_post_bottom().width) + 1;
 	BB_BOTTOM_MOUSE_PAD.y = (BB_Y_BOTTOM_POS[CURRENT_FRAME] + PAD_PRE_ROWS) - (BB_BOTTOM_MOUSE_PAD.height - M.size_post_bottom().height) + 1;
-
+	
 	if (LM_PARAMS.LM_DEBUG) {
+		DEBUG_TEXT << "BB_BOTTOM_MOUSE_PAD.x = (" << BB_X_POS[CURRENT_FRAME] << "+" << PAD_PRE_COLS << ") - (" << BB_BOTTOM_MOUSE_PAD.width << "-" << M.size_post_bottom().width << ") + 1" << endl;
+		DEBUG_TEXT << "BB_BOTTOM_MOUSE_PAD.y = (" << BB_Y_BOTTOM_POS[CURRENT_FRAME] << "+" << PAD_PRE_ROWS<< ") - (" << BB_BOTTOM_MOUSE_PAD.height << "-" << M.size_post_bottom().height<< ") + 1" << endl;
 		DEBUG_TEXT << "I_PAD.size(): " << I_PAD.size() << std::endl;
-		DEBUG_TEXT << "BB_BOTTOM_MOUSE_PAD: " << BB_BOTTOM_MOUSE << std::endl;
+		DEBUG_TEXT << "BB_BOTTOM_MOUSE_PAD: " << BB_BOTTOM_MOUSE_PAD << std::endl;
 		DEBUG_TEXT << "BB_UNPAD_MOUSE_BOTTOM: " << BB_UNPAD_MOUSE_BOTTOM << std::endl;
 	}
 
@@ -2233,7 +2296,7 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 			MyMat frame_potentials;
 
 			if (LM_PARAMS.LM_DEBUG) {
-				DEBUG_TEXT << i_frames << endl;
+				DEBUG_TEXT <<  "Frame number: " << i_frames << std::endl;
 			}
 
 			if (p_T[i_frames] < candidates_bottom_top_matched[i_frames].size()) {
@@ -2250,15 +2313,15 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 				}
 
 				if (LM_PARAMS.LM_DEBUG)
-					DEBUG_TEXT << "Pushed top candidates" << endl;
+					DEBUG_TEXT << "Pushed top candidates" << std::endl;
 
 			}
 			else {
+				if (LM_PARAMS.LM_DEBUG)
+					DEBUG_TEXT << "No top candidates" << std::endl;
+
 				//There is no solution on the bottom view. Add occlusion grid points only.
 				frame_potentials = MyMat(0, 1);
-
-				if (LM_PARAMS.LM_DEBUG)
-					DEBUG_TEXT << "No top candidates" << endl;
 
 			}
 
@@ -2266,21 +2329,26 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 			unary_potential_side.push_back(frame_potentials);
 
 			if (LM_PARAMS.LM_DEBUG)
-				DEBUG_TEXT << "Pushed potentials" << endl;
+				DEBUG_TEXT << "Pushed potentials" << std::endl;
 
 			if (i_frames > 0) {
-				//DEBUG_TEXT << "Computing pairwise potentials: " << endl;
+				if (LM_PARAMS.LM_DEBUG)
+					DEBUG_TEXT << "Computing pairwise potentials" << std::endl;
+
 				//Compute pairwise costs for the top view:
 
 				MATSPARSE temp_matsparse = pairwisePotential_SideView(Z_prev, Z, (double)lowest_point, (double)LM_PARAMS.occlusion_grid_spacing_pixels, ONG_side, Nong_top, LM_PARAMS.max_displacement_top, LM_PARAMS.alpha_vel_top, LM_PARAMS.pairwise_occluded_cost);
 				pairwise_potential_side.push_back(temp_matsparse);
 
 				if (LM_PARAMS.LM_DEBUG)
-					DEBUG_TEXT << "Pushed pairwise potentials" << endl;
+					DEBUG_TEXT << "Pushed pairwise potentials" << std::endl;
 
 			}
 
 			Z_prev = Z;
+
+			if (LM_PARAMS.LM_DEBUG)
+				DEBUG_TEXT << "Frame Done." << std::endl;
 		}
 
 		//Solve match2nd tracking for the current top view:
@@ -2718,7 +2786,7 @@ void LocoMouse::selectLargestRegion(const cv::Mat &Iin, cv::Mat &Iout) {
 		}
 
 		//Selecting the largest object: 
-		compare(labels, largest_object, Iout, CMP_EQ); //FIXME: This is made for masking the tail not for getting its position!!
+		cv::compare(labels, largest_object, Iout, CMP_EQ); //FIXME: This is made for masking the tail not for getting its position!!
 	}
 	else {
 		Iout = cv::Mat::zeros(Iin.size(), CV_8UC1);

@@ -14,7 +14,7 @@ Note: The TM adaptations were originally developed by Dana Darmohrray in MATLAB.
 #include "LocoMouse_class.hpp"
 
 class LocoMouse_TM : public LocoMouse {
-private:
+protected:
 	//Parameters that are specific to this method:
 	cv::Mat DISK_FILTER; //Disk filter for filtering the image and compute BB
 
@@ -22,8 +22,15 @@ private:
 	double BOTTOM_THRESHOLD = 2.55, SIDE_THRESHOLD = 2.55; //0.01 in [0 255] range.
 	int MIN_VIS_PIXEL = 1, MIN_PIXEL_COUNT = 500;
 	
+	//Zeroing out cols and rows for background subtraction: These parameters are hardcoded and specific to the setups where these methods were developed.
+	int ZERO_COL_PRE = 46, ZERO_COL_POST = 760;
+	int ZERO_ROW_PRE = 100, ZERO_ROW_POST = 149;
+
 	void imfill(const Mat &Iin, Mat &Iout);
 
+	cv::Mat bwAreaOpen(cv::Mat &Iin);
+
+private:
 	//Computing BB for the TM setup:
 	void computeMouseBox_DD(cv::Mat &I_side_view, double& bb_x);
 

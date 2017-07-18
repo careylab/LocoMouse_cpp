@@ -13,6 +13,9 @@ std::unique_ptr<LocoMouse> LocoMouse_Initialize(LocoMouse_ParseInputs INPUT) {
 	case 1:
 		L.reset(new LocoMouse_TM(INPUT));
 		break;
+	case 2:
+		L.reset(new LocoMouse_TM_DE(INPUT));
+		break;
 	default:
 		std::cout << "Unknown method option. Attempting to track with the default method." << std::endl;
 		L.reset(new LocoMouse(INPUT));
