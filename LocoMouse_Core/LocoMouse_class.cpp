@@ -873,7 +873,7 @@ void LocoMouse::detectSideCandidates() {
 }
 
 
-vector <Candidate> LocoMouse::detectPointCandidatesBottom(cv::Mat& I_VIEW_PAD, cv::Rect &BB_UNPAD, LocoMouse_Feature &M_FEAT, cv::Mat &I_bb_bottom_mask) {
+std::vector <Candidate> LocoMouse::detectPointCandidatesBottom(cv::Mat& I_VIEW_PAD, cv::Rect &BB_UNPAD, LocoMouse_Feature &M_FEAT, cv::Mat &I_bb_bottom_mask) {
 
 	//Filter the image with the model:
 	cv::Mat Filter_Scores_PAD, Filter_Scores;
@@ -888,7 +888,7 @@ vector <Candidate> LocoMouse::detectPointCandidatesBottom(cv::Mat& I_VIEW_PAD, c
 
 }
 
-vector <Candidate> LocoMouse::detectPointCandidatesSide(cv::Mat& I_VIEW_PAD, cv::Rect &BB_UNPAD, LocoMouse_Feature &M_FEAT, cv::Mat &I_bb_bottom_mask) {
+std::vector <Candidate> LocoMouse::detectPointCandidatesSide(cv::Mat& I_VIEW_PAD, cv::Rect &BB_UNPAD, LocoMouse_Feature &M_FEAT, cv::Mat &I_bb_bottom_mask) {
 
 	//Filter the image with the model:
 	cv::Mat Filter_Scores_PAD, Filter_Scores;
@@ -1038,10 +1038,10 @@ void LocoMouse::matchBottomSideCandidates() {
 	}
 
 	//FIXME: Fix the debugging variable
-	Point_<int> padding_pre_bottom = Point_<int>(M.size_pre_bottom().width, M.size_pre_bottom().height);
-	Point_<int> padding_pre_side = Point_<int>(M.size_pre_side().width, M.size_pre_side().height);
+	cv::Point_<int> padding_pre_bottom = cv::Point_<int>(M.size_pre_bottom().width, M.size_pre_bottom().height);
+	cv::Point_<int> padding_pre_side = cv::Point_<int>(M.size_pre_side().width, M.size_pre_side().height);
 
-	vector <P22D> P = matchingWithVelocityConstraint(CANDIDATES_BOTTOM_PAW.back(), CANDIDATES_SIDE_PAW.back(), I_BOTTOM_MOUSE_PAD, I_SIDE_MOUSE_PAD, I_BOTTOM_MOUSE_PAD_PREV, I_SIDE_MOUSE_PAD_PREV, padding_pre_bottom, padding_pre_side, CURRENT_FRAME > 0, M.paw, LM_PARAMS.top_bottom_min_overlap, false);
+	std::vector <P22D> P = matchingWithVelocityConstraint(CANDIDATES_BOTTOM_PAW.back(), CANDIDATES_SIDE_PAW.back(), I_BOTTOM_MOUSE_PAD, I_SIDE_MOUSE_PAD, I_BOTTOM_MOUSE_PAD_PREV, I_SIDE_MOUSE_PAD_PREV, padding_pre_bottom, padding_pre_side, CURRENT_FRAME > 0, M.paw, LM_PARAMS.top_bottom_min_overlap, false);
 	CANDIDATES_MATCHED_VIEWS_PAW.push_back(P);
 
 	P = matchingWithVelocityConstraint(CANDIDATES_BOTTOM_SNOUT.back(), CANDIDATES_SIDE_SNOUT.back(), I_BOTTOM_MOUSE_PAD, I_SIDE_MOUSE_PAD, I_BOTTOM_MOUSE_PAD_PREV, I_SIDE_MOUSE_PAD_PREV, padding_pre_bottom, padding_pre_side, CURRENT_FRAME > 0, M.snout, LM_PARAMS.top_bottom_min_overlap, false);
@@ -1055,7 +1055,7 @@ void LocoMouse::matchBottomSideCandidates() {
 
 };
 
-vector<P22D> LocoMouse::matchingWithVelocityConstraint(vector<Candidate>& Candidates_b, vector<Candidate>& Candidates_t, const cv::Mat& Ibbb, const cv::Mat& Itbb, const cv::Mat& Ibbb_prev, const cv::Mat& Itbbb_prev, const Point_<int> padding_pre_bottom, const Point_<int> padding_pre_side, bool vel_check, LocoMouse_Feature& F, double T, bool debug) {
+std::vector<P22D> LocoMouse::matchingWithVelocityConstraint(std::vector<Candidate>& Candidates_b, std::vector<Candidate>& Candidates_t, const cv::Mat& Ibbb, const cv::Mat& Itbb, const cv::Mat& Ibbb_prev, const cv::Mat& Itbbb_prev, const cv::Point_<int> padding_pre_bottom, const cv::Point_<int> padding_pre_side, bool vel_check, LocoMouse_Feature& F, double T, bool debug) {
 	// BOXPAIRINGS Pairs boxes that overlap at least T horizontally.
 	//
 	// INPUT :
@@ -1082,7 +1082,7 @@ vector<P22D> LocoMouse::matchingWithVelocityConstraint(vector<Candidate>& Candid
 	int ovlp = (F.size_bottom().width * (1 - T));
 	int N_bottom = Candidates_b.size();
 	int N_top = Candidates_t.size();
-	vector<P22D> Candidates_bt;
+	std::vector<P22D> Candidates_bt;
 	if (N_bottom == 0) {
 		if (LM_PARAMS.LM_DEBUG)
 			DEBUG_TEXT << "N_bottom == 0, returned." << std::endl;
@@ -1107,7 +1107,7 @@ vector<P22D> LocoMouse::matchingWithVelocityConstraint(vector<Candidate>& Candid
 	return matchViews(boolD, D_top_weight, Candidates_b, Candidates_t, vel_check, F, Ibbb, Itbb, Ibbb_prev, Itbbb_prev, padding_pre_bottom, padding_pre_side, debug);
 }
 
-cv::Mat LocoMouse::xDist(const vector<Candidate> &P1, const vector <Candidate> &P2) {
+cv::Mat LocoMouse::xDist(const std::vector<Candidate> &P1, const std::vector <Candidate> &P2) {
 	//Computes the distance in pixels on the x axis.	
 
 	cv::Mat D(P1.size(), P2.size(), CV_32SC1);
@@ -1141,14 +1141,14 @@ cv::Mat LocoMouse::xDist(const vector<Candidate> &P1, const vector <Candidate> &
 	return D;
 }
 
-vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_top_weight, const vector<Candidate> &C_b, const vector<Candidate> &C_t, bool vel_check, LocoMouse_Feature &F, const cv::Mat &Ibbb, const cv::Mat &Itbb, const cv::Mat &Ibbb_prev, const cv::Mat &Itbb_prev, const cv::Point_<int> padding_pre_bottom, const cv::Point_<int> padding_pre_side, bool debug) {
+std::vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_top_weight, const std::vector<Candidate> &C_b, const std::vector<Candidate> &C_t, bool vel_check, LocoMouse_Feature &F, const cv::Mat &Ibbb, const cv::Mat &Itbb, const cv::Mat &Ibbb_prev, const cv::Mat &Itbb_prev, const cv::Point_<int> padding_pre_bottom, const cv::Point_<int> padding_pre_side, bool debug) {
 	//FIXME: VERY IMPORTANT - I'm assuming there are not more than 255 candidates per match. This is a very safe bet, as if it happens the data is wrong for sure.
 
 	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "matchViews" << std::endl;
 
 
-	vector<P22D> C;
+	std::vector<P22D> C;
 
 	int N_top = C_t.size();
 	int N_bottom = C_b.size();
@@ -1167,8 +1167,8 @@ vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_top_we
 	double moving_threshold = 25;
 
 	//Avoiding the moving status twice for top candidates since we are doing nested loops:
-	vector<bool> need_to_check(N_top, true);
-	vector<bool> moving_t(N_top, false);
+	std::vector<bool> need_to_check(N_top, true);
+	std::vector<bool> moving_t(N_top, false);
 
 	cv::Mat M_check_velocity, M_t_per_b_match;
 	float *top_per_bottom_match = 0, *bottom_per_top_match = 0;
@@ -1574,7 +1574,7 @@ double stdvec(std::vector<double> &v, int N) {
 		return 0.0;
 	}
 
-	std::vector<double> vv(N);
+	std::std::vector<double> vv(N);
 	for (int i_val = 0; i_val < N; ++i_val) {
 		vv[i_val] = (double)v[i_val];
 	}
@@ -1582,7 +1582,7 @@ double stdvec(std::vector<double> &v, int N) {
 	double sum = std::accumulate(vv.begin(), vv.end(), 0.0);
 	double mean = sum / N;
 
-	std::vector<double> diff(N);
+	std::std::vector<double> diff(N);
 	transform(vv.begin(), vv.end(), diff.begin(),
 		std::bind2nd(std::minus<double>(), mean));
 	double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
@@ -1641,7 +1641,7 @@ void vecmovingaverage(std::vector<double> &v, std::vector<unsigned int> &vout, i
 	return;
 }
 
-vector<Candidate> nmsMax(const Mat& detection_box, Size box_size, double overlap) {
+std::vector<Candidate> nmsMax(const Mat& detection_box, Size box_size, double overlap) {
 	/* nmsMax performs non - maxima suppresion in a volume using the Pascal
 	criterium of intersection_area / union_area > overlap->suppression.
 
@@ -1656,14 +1656,14 @@ vector<Candidate> nmsMax(const Mat& detection_box, Size box_size, double overlap
 	*/
 
 	if (!detection_box.data) {
-		vector<Candidate> empty;
+		std::vector<Candidate> empty;
 		return empty;
 	}
 
 	//ofstream temp("temp.txt");
 
 	//Extract positive detections and sort:
-	vector <Candidate> detections;
+	std::vector <Candidate> detections;
 
 	int N_cols = detection_box.cols;
 	int N_rows = detection_box.rows;
@@ -1684,7 +1684,7 @@ vector<Candidate> nmsMax(const Mat& detection_box, Size box_size, double overlap
 	uint N_detections = detections.size();
 
 	if (N_detections == 0) {
-		vector<Candidate> empty;
+		std::vector<Candidate> empty;
 		return empty;
 	}
 
@@ -1693,8 +1693,8 @@ vector<Candidate> nmsMax(const Mat& detection_box, Size box_size, double overlap
 
 	//-- Perform Non-maxima suppression keeping track of which maxima supresses each point.
 
-	vector <unsigned int> maxima_index(N_detections);
-	vector <unsigned int> candidate_index;
+	std::vector <unsigned int> maxima_index(N_detections);
+	std::vector <unsigned int> candidate_index;
 	uint candidate_counter = 0;
 	std::map<unsigned int, unsigned int> maxima_index_mapping;
 
@@ -1702,11 +1702,11 @@ vector<Candidate> nmsMax(const Mat& detection_box, Size box_size, double overlap
 	double area2 = 2 * box_size.area();
 
 	//Points to suppress:
-	vector<bool> discard(N_detections, false);
+	std::vector<bool> discard(N_detections, false);
 
 	//Going over the point candidates:
-	Rect Rect_1(0, 0, box_size.width, box_size.height);
-	Rect Rect_2(0, 0, box_size.width, box_size.height);
+	cv::Rect Rect_1(0, 0, box_size.width, box_size.height);
+	cv::Rect Rect_2(0, 0, box_size.width, box_size.height);
 
 	for (uint i = 0; i < N_detections; ++i) {
 		//Move Rect_1:
@@ -1757,9 +1757,9 @@ vector<Candidate> nmsMax(const Mat& detection_box, Size box_size, double overlap
 	uint N_candidates = candidate_index.size();
 
 	//Computing the weighted average based on the cluster size:
-	vector<Candidate> candidates(N_candidates);
-	vector < Point_<double> > weighted_mean(N_candidates);
-	vector <double> sumscores(N_candidates);
+	std::vector<Candidate> candidates(N_candidates);
+	std::vector < cv::Point_<double> > weighted_mean(N_candidates);
+	std::vector <double> sumscores(N_candidates);
 
 	//Computing the weighted mean for each maxima cluster:
 	for (uint i_detections = 0; i_detections < N_detections; ++i_detections) {
@@ -1767,7 +1767,7 @@ vector<Candidate> nmsMax(const Mat& detection_box, Size box_size, double overlap
 		x = detections[i_detections].point().x;
 		y = detections[i_detections].point().y;
 
-		weighted_mean[maxima_index_mapping[maxima_index[i_detections]]] += Point_<double>(x, y) * detections[i_detections].score();
+		weighted_mean[maxima_index_mapping[maxima_index[i_detections]]] += cv::Point_<double>(x, y) * detections[i_detections].score();
 
 		sumscores[maxima_index_mapping[maxima_index[i_detections]]] += detections[i_detections].score();
 	}
@@ -1780,7 +1780,7 @@ vector<Candidate> nmsMax(const Mat& detection_box, Size box_size, double overlap
 	return candidates;
 }
 
-vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cluster_method, double overlap, bool debug) {
+std::vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cluster_method, double overlap, bool debug) {
 	/*PEAKCLUSTERING Clusters detections that overlap. The new center is their
 	weighted mean by the detection scores.The new score is the median
 	detection score.
@@ -1793,7 +1793,7 @@ vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cl
 	overlap: a value between 0 and 1 deciding the overlap percentage of the boxes.
 	*/
 
-	vector <Candidate> candidates;
+	std::vector <Candidate> candidates;
 	int candidate_counter = 0;
 
 	if (!detection_box.data) {
@@ -1801,7 +1801,7 @@ vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cl
 	}
 
 	//Extracting the coordinates of points with positive detection :
-	vector <Candidate> detections;
+	std::vector <Candidate> detections;
 	int N_cols = detection_box.cols;
 	int N_rows = detection_box.rows;
 
@@ -1836,22 +1836,22 @@ vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cl
 	//Pre-computing box parameters:
 	double area2 = 2 * box_size.height * box_size.width;
 
-	vector<bool> kp(N_points, false);
+	std::vector<bool> kp(N_points, false);
 
 	//Checking the center coordinate mode:
 	//FIXME: By using Rect it shouldn't matter as the offset is the same to all points. Since no information about the image is being used, there should be no out of bounds issues.
 
 	//Going over the point candidates:
-	Rect Rect_1(0, 0, box_size.width, box_size.height);
-	Rect Rect_2(0, 0, box_size.width, box_size.height);
-	Point_<int> P(0, 0);
+	cv::Rect Rect_1(0, 0, box_size.width, box_size.height);
+	cv::Rect Rect_2(0, 0, box_size.width, box_size.height);
+	cv::Point_<int> P(0, 0);
 	int counter = 0;
 	for (int i = 0; i < N_points; ++i) {
 
 		if (kp[i])
 			continue;
 		//Check with a fresh mind what the current cluster variable really does.
-		vector<Candidate> current_cluster; //This is copying values. Is it really the best way?
+		std::vector<Candidate> current_cluster; //This is copying values. Is it really the best way?
 		current_cluster.push_back(detections[i]);
 
 		//Move Rect_1:
@@ -1886,9 +1886,9 @@ vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cl
 		//Compute the weighted average of the points of the cluster:
 		//Understand how this can be done using accumulator. For now, a bit advanced.
 		if (current_cluster.size() > 1) {
-			Point_<double> peak_point(0, 0);
+			cv::Point_<double> peak_point(0, 0);
 			double sum_peak_score = 0;
-			vector<double> cluster_scores(current_cluster.size());
+			std::vector<double> cluster_scores(current_cluster.size());
 
 			/*if (debug && counter == 2) {
 			for (uint i_cluster = 0; i_cluster < current_cluster.size(); i_cluster++) {
@@ -1897,7 +1897,7 @@ vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cl
 			}*/
 
 			for (uint i_cluster = 0; i_cluster < current_cluster.size(); i_cluster++) {
-				peak_point += Point_<double>(current_cluster[i_cluster].point().x, current_cluster[i_cluster].point().y)*current_cluster[i_cluster].score();
+				peak_point += cv::Point_<double>(current_cluster[i_cluster].point().x, current_cluster[i_cluster].point().y)*current_cluster[i_cluster].score();
 				sum_peak_score += current_cluster[i_cluster].score();
 				cluster_scores[i_cluster] = current_cluster[i_cluster].score();
 			}
@@ -1914,7 +1914,7 @@ vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cl
 			//FIXME: Check divide by zeros etc.
 			peak_point = peak_point / sum_peak_score;
 			//double peak_score = sum_peak_score / current_cluster.size(); //FIXME: MATLAB uses max!
-			candidates.push_back(Candidate(Point_<int>(round(peak_point.x), round(peak_point.y)), detections[i].score()));
+			candidates.push_back(Candidate(cv::Point_<int>(round(peak_point.x), round(peak_point.y)), detections[i].score()));
 
 		}
 		else {
@@ -1940,7 +1940,7 @@ vector<Candidate> peakClustering(const Mat& detection_box, Size box_size, int cl
 
 
 
-MyMat LocoMouse::unaryCostBox(vector<Candidate> &p_candidates, Rect &BB, vector<LocoMouse_LocationPrior> location_prior) {
+MyMat LocoMouse::unaryCostBox(std::vector<Candidate> &p_candidates, cv::Rect &BB, std::vector<LocoMouse_LocationPrior> location_prior) {
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "--- unaryCostBox()" << std::endl;
@@ -1955,7 +1955,7 @@ MyMat LocoMouse::unaryCostBox(vector<Candidate> &p_candidates, Rect &BB, vector<
 
 	for (int i = 0; i < N_candidates; ++i) {
 
-		Point_<double> candidate = Point_<double>((double)p_candidates[i].point().x / (double)BB.width, (double)p_candidates[i].point().y / (double)BB.height);
+		cv::Point_<double> candidate = cv::Point_<double>((double)p_candidates[i].point().x / (double)BB.width, (double)p_candidates[i].point().y / (double)BB.height);
 
 		for (int j = 0; j < N_features; ++j) {
 			if (candidate.inside(location_prior[j].area())) {
@@ -1964,7 +1964,7 @@ MyMat LocoMouse::unaryCostBox(vector<Candidate> &p_candidates, Rect &BB, vector<
 				}
 
 				//Distance to location prior point:
-				Point_<double> distance = candidate - location_prior[j].position();
+				cv::Point_<double> distance = candidate - location_prior[j].position();
 				double val = sqrt(distance.dot(distance)) * norm_fact;
 
 				if (LM_PARAMS.LM_DEBUG) {
@@ -1985,7 +1985,7 @@ MyMat LocoMouse::unaryCostBox(vector<Candidate> &p_candidates, Rect &BB, vector<
 	return M;
 }
 
-MATSPARSE LocoMouse::pairwisePotential(vector<Candidate> &Ci, vector<Candidate> &Cip1, Point_<double> &grid_mapping, double grid_spacing, vector< Point_<double> > &ONGi, Size ONG_size, double max_displacement, double alpha_vel, double pairwise_occluded_cost) {
+MATSPARSE LocoMouse::pairwisePotential(std::vector<Candidate> &Ci, std::vector<Candidate> &Cip1, cv::Point_<double> &grid_mapping, double grid_spacing, std::vector< cv::Point_<double> > &ONGi, Size ONG_size, double max_displacement, double alpha_vel, double pairwise_occluded_cost) {
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "--- pairwisePotential() " << std::endl;
@@ -2002,10 +2002,12 @@ MATSPARSE LocoMouse::pairwisePotential(vector<Candidate> &Ci, vector<Candidate> 
 
 	double pairwise_occluded_cost_alpha_vel = pairwise_occluded_cost * alpha_vel;
 
-	if (isinf(pairwise_occluded_cost_alpha_vel)) {
+	if (std::isinf(pairwise_occluded_cost_alpha_vel)) {
+		//FIXME: Throw execption
 		cout << "Inf detected" << endl;
 	}
-	if (isnan(pairwise_occluded_cost_alpha_vel)) {
+	if (std::isnan(pairwise_occluded_cost_alpha_vel)) {
+		//FIXME: Throw execption
 		cout << "NaN detected" << endl;
 	}
 
@@ -2018,8 +2020,8 @@ MATSPARSE LocoMouse::pairwisePotential(vector<Candidate> &Ci, vector<Candidate> 
 	MyMat D = MyMat(Nip1 + Nong, Ni + Nong);
 
 	//DEBUG_TEXT << "Size of transition matrix is: " << D.Nrows() << " " << D.Ncols() << endl;
-	Point_<uint32_t> ONG_i;
-	Point_<uint32_t> ONG_ip1;
+	cv::Point_<uint32_t> ONG_i;
+	cv::Point_<uint32_t> ONG_ip1;
 
 	//DEBUG_TEXT << "BR Coordinates: " << grid_mapping << endl;
 
@@ -2033,7 +2035,7 @@ MATSPARSE LocoMouse::pairwisePotential(vector<Candidate> &Ci, vector<Candidate> 
 		int32_t y_coord = round((grid_mapping.y - (double)Ci[i].point().y) / grid_spacing);
 
 		//FIXME: Implement the function for checking this condition. Better still, learn how to write it as a type independent function!
-		ONG_i = Point(matchToRange(x_coord, 0, Nong_x_aux), matchToRange(y_coord, 0, Nong_y_aux));
+		ONG_i = cv::Point(matchToRange(x_coord, 0, Nong_x_aux), matchToRange(y_coord, 0, Nong_y_aux));
 
 		//Xi -> ONG:
 		//DEBUG_TEXT << "ONG index + Nip1: " << (Nip1 + (ONG_i.y * Nong_x + ONG_i.x)) << endl;
@@ -2048,7 +2050,7 @@ MATSPARSE LocoMouse::pairwisePotential(vector<Candidate> &Ci, vector<Candidate> 
 				int32_t y_coord2 = round((grid_mapping.y - (double)Cip1[j].point().y) / grid_spacing);
 
 				//DEBUG_TEXT << "Initial distance: " << x_coord2 << " " << y_coord2 << endl;
-				ONG_ip1 = Point(matchToRange(x_coord2, 0, Nong_x_aux), matchToRange(y_coord2, 0, Nong_y_aux));
+				ONG_ip1 = cv::Point(matchToRange(x_coord2, 0, Nong_x_aux), matchToRange(y_coord2, 0, Nong_y_aux));
 
 				//DEBUG_TEXT << "ONG grid matrix index mapping for point " << j << " of frame ip1 is: " << ONG_ip1 << " " << (ONG_ip1.y * Nong_x + ONG_ip1.x) << endl;
 				//DEBUG_TEXT << (Ni + (ONG_ip1.y * Nong_x + ONG_ip1.x)) << endl;
@@ -2099,7 +2101,7 @@ MATSPARSE LocoMouse::pairwisePotential(vector<Candidate> &Ci, vector<Candidate> 
 }
 
 
-MATSPARSE LocoMouse::pairwisePotential_SideView(const vector<uint> &Zi, const vector<uint> &Zip1, double grid_mapping, double grid_spacing, const vector<uint> &ONGi, const unsigned int Nong, const double max_displacement, const double alpha_vel, const double pairwise_occluded_cost) {
+MATSPARSE LocoMouse::pairwisePotential_SideView(const std::vector<uint> &Zi, const std::vector<uint> &Zip1, double grid_mapping, double grid_spacing, const std::vector<uint> &ONGi, const unsigned int Nong, const double max_displacement, const double alpha_vel, const double pairwise_occluded_cost) {
 
 	int Ni = Zi.size();
 	int Nip1 = Zip1.size();
@@ -2247,7 +2249,7 @@ void LocoMouse::computeSideTracks() {
 }
 
 
-cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > &candidates_bottom_top_matched, const vector<uint> &ONG_side, const unsigned int lowest_point, const unsigned int N_features) {
+cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const std::vector< std::vector<P22D> > &candidates_bottom_top_matched, const std::vector<uint> &ONG_side, const unsigned int lowest_point, const unsigned int N_features) {
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "--- bestSideViewMatch() " << std::endl;
@@ -2272,13 +2274,13 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 			DEBUG_TEXT << "Computing side view tracks for feature: " << i_feature << endl;
 		}
 
-		vector<unsigned int> Z_prev;
+		std::vector<unsigned int> Z_prev;
 		//vector <MyMat> unary_potential_top(N_frames);
 		//vector <MATSPARSE> pairwise_potential_top(N_frames - 1);
 
-		vector <MyMat> unary_potential_side;
+		std::vector <MyMat> unary_potential_side;
 		unary_potential_side.reserve(N_FRAMES);
-		vector <MATSPARSE> pairwise_potential_side;
+		std::vector <MATSPARSE> pairwise_potential_side;
 		pairwise_potential_side.reserve(N_FRAMES - 1);
 
 		if (i_feature > 0) {
@@ -2292,7 +2294,7 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const vector< vector<P22D> > 
 
 		//Check Bottom view results:
 		for (int i_frames = 0; i_frames < N_FRAMES; i_frames++) {
-			vector<uint> Z;
+			std::vector<uint> Z;
 			MyMat frame_potentials;
 
 			if (LM_PARAMS.LM_DEBUG) {
@@ -2411,7 +2413,7 @@ void LocoMouse::exportResults() {
 	return;
 }
 
-void LocoMouse::exportPointTracks(const Mat& T_bottom, const Mat &T_top, const vector< vector<P22D> > &candidates_bottom_top_matched, const string feature_name, const unsigned int N_features) {
+void LocoMouse::exportPointTracks(const Mat& T_bottom, const Mat &T_top, const std::vector< std::vector<P22D> > &candidates_bottom_top_matched, const string feature_name, const unsigned int N_features) {
 
 	bool change_pointer_M = true;
 	if (T_bottom.isContinuous()) {
@@ -2512,7 +2514,7 @@ void LocoMouse::exportLineTracks(std::vector <cv::Mat> Tracks, std::string track
 
 
 
-void LocoMouse::exportTracksBottom(const Mat& T_bottom, const vector< vector <Candidate> > &candidates_bottom, const string feature_name, const unsigned int N_features) {
+void LocoMouse::exportTracksBottom(const Mat& T_bottom, const std::vector< std::vector <Candidate> > &candidates_bottom, const string feature_name, const unsigned int N_features) {
 
 	bool change_pointer_M = true;
 	if (T_bottom.isContinuous()) {
@@ -2601,8 +2603,8 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature &F, const unsign
 
 	cv::Mat Filtered_tail_bottom_pad, Filtered_tail_side_pad, Filtered_tail_bottom, Filtered_tail_side;
 	//Searching for the tail:
-	cv::filter2D(I_tail_bb_bottom_pad, Filtered_tail_bottom_pad, CV_32F, F.detector_bottom(), Point(-1, -1), -F.rho_bottom(), BORDER_CONSTANT);
-	cv::filter2D(I_tail_bb_side_pad, Filtered_tail_side_pad, CV_32F, F.detector_side(), Point(-1, -1), -F.rho_side(), BORDER_CONSTANT);
+	cv::filter2D(I_tail_bb_bottom_pad, Filtered_tail_bottom_pad, CV_32F, F.detector_bottom(), cv::Point(-1, -1), -F.rho_bottom(), BORDER_CONSTANT);
+	cv::filter2D(I_tail_bb_side_pad, Filtered_tail_side_pad, CV_32F, F.detector_side(), cv::Point(-1, -1), -F.rho_side(), BORDER_CONSTANT);
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Filtering tail done (both views)" << endl;
@@ -2750,7 +2752,7 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature &F, const unsign
 				}
 
 				//Move the box:
-				BB_tail_segment_bottom += Point(BB_tail_segment_bottom.width, 0);
+				BB_tail_segment_bottom += cv::Point(BB_tail_segment_bottom.width, 0);
 			}
 
 			//Tail top:
