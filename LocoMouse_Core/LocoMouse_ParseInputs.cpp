@@ -25,7 +25,7 @@ void LocoMouse_ParseInputs::configurePath(char* lm_call) {
 #elif __linux__
 
 	OUTPUT_PATH += "/";
-	REF_PATH = std::string(dirname(lm_call));
+	REF_PATH = std::string(dirname(lm_call)) + "/";
 	FILE_STEM = stripFileName(VIDEO_FILE);
 
 #endif

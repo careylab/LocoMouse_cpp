@@ -128,11 +128,11 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 		throw std::invalid_argument(error_message);
 	}
 
-	config_file["mode"] >> mode_int;
+	/*config_file["mode"] >> mode_int;
 	if (mode_int > 2 || mode_int < 0) {
 		error_message += "mode must belong to {0,1,2}. Was " + std::to_string(mode_int) + ".";
 		throw std::invalid_argument(error_message);
-	}
+	}*/
 
 	cv::Mat W;
 	config_file["location_prior"] >> W;
@@ -217,35 +217,29 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 		//FIXME: Write this properly with exceptions
 		cv::Mat S, B;
 		config_file["bounding_box_side"] >> S;
+
 		if (S.rows != 1 | S.cols != 4) {
-			//FIXME: Add proper exception.
-			std::cout << "bounding_box_top must be a 1x4 opencv matrix." << std::endl;
-			//return -1;
+			std::cout << S.rows << " " << S.cols << std::endl;
+			error_message += "bounding_box_side must be a 1x4 OpenCV matrix.";
+			throw std::invalid_argument(error_message);
 		}
+
 		if (S.type() != CV_32SC1) {
-			//FIXME: Add proper exception.
-			std::cout << "bounding_box_top must be provided as a 1x4 opencv matrix of type int (yml: i)." << std::endl;
-			//return -1;
+			error_message += "bounding_box_side must be a 1x4 opencv matrix of type int (yml: i).";
+			throw std::invalid_argument(error_message);
 		}
 
 		BB_USER_SIDE = cv::Rect(S.at<int>(0, 0), S.at<int>(0, 1), S.at<int>(0, 2), S.at<int>(0, 3));
 
-		//if (BB_user_top.x < 0 | BB_user_top.y < 0 | (BB_user_top.x + BB_user_top.width) >= N_cols | (BB_user_top.y + BB_user_top.height)  >= N_rows) {
-		//std::cout << "bounding_box_top exceeds input image dimensions!" << std::endl;
-		///std::cout << BB_user_top << std::endl;
-		//std::cout << "Image size (h,w): " << N_rows << " " << N_cols << std::endl;
-		//return -1;
-		//}
-
 		config_file["bounding_box_bottom"] >> B;
 		if (B.rows != 1 | B.cols != 4) {
-			//FIXME: Add proper exception.
-			std::cout << "bounding_box_bottom must be a 1x4 opencv matrix." << std::endl;
-			//return -1;
+			error_message += "bounding_box_bottom must be a 1x4 OpenCV matrix.";
+			throw std::invalid_argument(error_message);
 		}
+
 		if (B.type() != CV_32SC1) {
 			//FIXME: Add proper exception.
-			std::cout << "bounding_box_top must be provided as a 1x4 opencv matrix of type in (yml: i)." << std::endl;
+			std::cout << "bounding_box_bottom must be provided as a 1x4 opencv matrix of type in (yml: i)." << std::endl;
 			//return -1;
 		}
 
@@ -354,31 +348,6 @@ LocoMouse::LocoMouse(LocoMouse_ParseInputs INPUTS) {
 		DEBUG_TEXT.open(debug_text);
 	}
 	
-	//FIXME: Check how to deal with the need for this file. Hardcode it?
-	//		//Behaviour mode:
-	//		//cv::Mat H;
-	//		if (mode_int == 1) {
-	//
-	//			std::string disk_path;
-	//
-	//#ifdef _WIN32
-	//			_makepath_s(path_buffer, drive, dir, "diskfilter", "yml"); // Creating path for diskfilter.yml at the same folder as LocoMouse.exe
-	//			disk_path = std::string(path_buffer);
-	//#elif __linux__
-	//			disk_path = ref_path + "/diskfilter.yml";
-	//#endif
-	//			FileStorage disk_filter(ref_path, FileStorage::READ);
-	//			if (!disk_filter.isOpened()) {
-	//				cout << "Could not load the diskfilter.yml at " << disk_path << ". This is essential for the T mode." << std::endl;
-	//				//return -1;
-	//			}
-	//			disk_filter["H"] >> H;
-	//			disk_filter.release();
-	//			
-	//			if (LM_PARAMS.LM_DEBUG) {
-	//				DEBUG_TEXT << "Disk filter loaded." << std::endl;
-	//			}
-	//		}
 }
 
 void LocoMouse::initializePaths(LocoMouse_ParseInputs INPUT) {
@@ -562,6 +531,8 @@ void LocoMouse::validateImageVideoSize() {
 		std::cout << N_COLS << std::endl;*/
 		
 		if (LM_PARAMS.BB_USER_BOTTOM.x < 0 | LM_PARAMS.BB_USER_BOTTOM.y < 0 | ((LM_PARAMS.BB_USER_BOTTOM.x + LM_PARAMS.BB_USER_BOTTOM.width) >= N_COLS) | ((LM_PARAMS.BB_USER_BOTTOM.y + LM_PARAMS.BB_USER_BOTTOM.height) >= N_ROWS)) {
+			std::cout << LM_PARAMS.BB_USER_BOTTOM << std::endl;
+			std::cout << N_ROWS << " " << N_COLS << std::endl;
 			throw std::runtime_error(Stream_Formatter() << "Provided bounding box for the bottom view exceeds the image dimensions." +'\n');
 		}
 
@@ -1315,6 +1286,7 @@ void LocoMouse::readFrame(cv::Mat &I) {
 
 	cv::Mat F;
 	V >> F;
+
 	if (!F.data) {
 		throw std::runtime_error(Stream_Formatter() << "Error: Failed to read image from video file." << '\n');
 	}
@@ -1574,7 +1546,7 @@ double stdvec(std::vector<double> &v, int N) {
 		return 0.0;
 	}
 
-	std::std::vector<double> vv(N);
+	std::vector<double> vv(N);
 	for (int i_val = 0; i_val < N; ++i_val) {
 		vv[i_val] = (double)v[i_val];
 	}
@@ -1582,7 +1554,7 @@ double stdvec(std::vector<double> &v, int N) {
 	double sum = std::accumulate(vv.begin(), vv.end(), 0.0);
 	double mean = sum / N;
 
-	std::std::vector<double> diff(N);
+	std::vector<double> diff(N);
 	transform(vv.begin(), vv.end(), diff.begin(),
 		std::bind2nd(std::minus<double>(), mean));
 	double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);

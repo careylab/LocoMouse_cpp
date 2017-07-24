@@ -5,6 +5,7 @@ LocoMouse_TM::LocoMouse_TM(LocoMouse_ParseInputs INPUTS) : LocoMouse(INPUTS) {
 	//Open file and initialize the disk filter:
 	cv::FileStorage disk_filter(ref_path + "diskfilter.yml", cv::FileStorage::READ);
 	if (!disk_filter.isOpened()) {
+		std::cout << ref_path + "diskfilter.yml" << std::endl;
 		throw std::invalid_argument("Failed to read config file: diskfilter.yml");
 	}
 
@@ -12,7 +13,8 @@ LocoMouse_TM::LocoMouse_TM(LocoMouse_ParseInputs INPUTS) : LocoMouse(INPUTS) {
 
 	disk_filter.release();
 
-	if (BB_SIDE_VIEW.width < ZERO_COL_PRE || BB_SIDE_VIEW.width < ZERO_COL_POST) {
+	//FIXME: Create function instead of repeating block:
+	if ((BB_SIDE_VIEW.width < ZERO_COL_PRE || BB_SIDE_VIEW.width < ZERO_COL_POST) & !LM_PARAMS.use_provided_bb) {
 		
 		std::cerr << "BB_SIDE_VIEW: " << BB_SIDE_VIEW << std::endl;
 		std::cerr << "ZERO_COL_PRE, ZERO_COL_POST: " << ZERO_COL_PRE << " " << ZERO_COL_POST << endl;
@@ -20,7 +22,8 @@ LocoMouse_TM::LocoMouse_TM(LocoMouse_ParseInputs INPUTS) : LocoMouse(INPUTS) {
 		throw::std::invalid_argument("Side View image size is not compatible with the zero_col parameters for the bounding box computations. See the definition of the LocoMouse_TM class.");
 	}
 
-	if (BB_SIDE_VIEW.height < ZERO_ROW_PRE || BB_SIDE_VIEW.height < ZERO_ROW_POST) {
+	if ((BB_SIDE_VIEW.height < ZERO_ROW_PRE || BB_SIDE_VIEW.height < ZERO_ROW_POST) & !LM_PARAMS.use_provided_bb) {
+
 		std::cerr << "BB_SIDE_VIEW: " << BB_SIDE_VIEW << std::endl;
 		std::cerr << "ZERO_ROW_PRE, ZERO_ROW_POST: " << ZERO_ROW_PRE << " " << ZERO_ROW_POST << endl;
 		
