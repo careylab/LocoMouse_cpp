@@ -785,7 +785,7 @@ void LocoMouse::detectBottomCandidates() {
 
 	//Masking the mouse:
 	cv::Mat I_bb_bottom_mask;
-	threshold(I_BOTTOM_MOUSE, I_bb_bottom_mask, 25.5, 255, cv::THRESH_BINARY_INV); //Threshold at 0.1 on [0 1] range.
+	cv::threshold(I_BOTTOM_MOUSE, I_bb_bottom_mask, 25.5, 255, cv::THRESH_BINARY_INV); //Threshold at 0.1 on [0 1] range.
 	I_bb_bottom_mask(BB_BOTTOM_TAIL).setTo(255, TAIL_MASK); //Setting tail area to 0.
 
 	if (LM_PARAMS.LM_DEBUG) {
@@ -820,7 +820,7 @@ void LocoMouse::detectSideCandidates() {
 
 	//Masking the mouse:
 	cv::Mat I_bb_side_mask;
-	threshold(I_SIDE_MOUSE, I_bb_side_mask, 25.5, 255, cv::THRESH_BINARY_INV); //Threshold at 0.1 on [0 1] range.
+	cv::threshold(I_SIDE_MOUSE, I_bb_side_mask, 25.5, 255, cv::THRESH_BINARY_INV); //Threshold at 0.1 on [0 1] range.
 
 	//Detecting Paw Candidates:
 	if (CANDIDATES_BOTTOM_PAW.back().size() > 0)
@@ -2040,13 +2040,17 @@ MATSPARSE LocoMouse::pairwisePotential(std::vector<Candidate> &Ci, std::vector<C
 				//If it passes, put it into D as the inverse distance:
 				double inv_dist = 1 - (dist / max_displacement);
 				//DEBUG_TEXT << "Transition (" << j << "," << i << ") has distance: " << inv_dist << endl;
-
+				
+				inv_dist = inv_dist * alpha_vel;
 				D.put(j, i, inv_dist * alpha_vel);
 
-					cout << "Inf detected" << endl;
+				if (std::isinf(inv_dist)) {
+					//FIXME: Throw?
+					std::cout << "Inf detected" << std::endl;
 				}
-				if (std::isnan(inv_dist * alpha_vel)) {
-					cout << "NaN detected" << endl;
+				if (std::isnan(inv_dist)) {
+					//FIXME: Throw?
+					std::cout << "NaN detected" << std::endl;
 				}
 			}
 		}
@@ -2107,7 +2111,7 @@ MATSPARSE LocoMouse::pairwisePotential_SideView(const std::vector<uint> &Zi, con
 
 		for (int j = 0; j < Nip1; ++j) {
 			//Compute distance between points:
-			double dist = abs((double)Zip1[j] - (double)Zi[i]);
+			double dist = abs((double) Zip1[j] - (double) Zi[i]);
 			//cout << "Distance:" << Zi[i] << " " << Zip1[j] << " " << dist << endl;
 
 			//Check if it passes the criterion:
