@@ -2043,6 +2043,7 @@ MATSPARSE LocoMouse::pairwisePotential(std::vector<Candidate> &Ci, std::vector<C
 
 				D.put(j, i, inv_dist * alpha_vel);
 
+				if (std::isinf(inv_dist * alpha_vel)) {
 					cout << "Inf detected" << endl;
 				}
 				if (std::isnan(inv_dist * alpha_vel)) {
