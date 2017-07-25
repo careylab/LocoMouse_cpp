@@ -2042,7 +2042,7 @@ MATSPARSE LocoMouse::pairwisePotential(std::vector<Candidate> &Ci, std::vector<C
 				//DEBUG_TEXT << "Transition (" << j << "," << i << ") has distance: " << inv_dist << endl;
 				
 				inv_dist = inv_dist * alpha_vel;
-				D.put(j, i, inv_dist * alpha_vel);
+				D.put(j, i, inv_dist);
 
 				if (std::isinf(inv_dist)) {
 					//FIXME: Throw?
