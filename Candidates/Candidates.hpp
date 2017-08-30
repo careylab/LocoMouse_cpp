@@ -81,19 +81,19 @@ public:
 
 public:
 	Point_<int> point_bottom() const;
-	Point_<int> point_top(uint) const;
+	Point_<int> point_side(uint) const;
 	double score_bottom() const;
-	double score_top(uint) const;
+	double score_side(uint) const;
 	int x_coord() const;
 	int y_bottom_coord() const;
-	int y_top_coord(uint) const;
+	int y_side_coord(uint) const;
 
-	void add_top_candidate(Candidate);
-	void add_top_candidate(Point_<int>, double);
-	void add_top_candidate(int y, double s);
+	void add_side_candidate(Candidate);
+	void add_side_candidate(Point_<int>, double);
+	void add_side_candidate(int y, double s);
 	
 	int number_of_candidates() const;
-	Candidate get_candidate_top(uint) const;
+	Candidate get_candidate_side(uint) const;
 	Candidate get_candidate_bottom() const;
 
 	//Read/Write using yml opencv-like:
@@ -101,7 +101,7 @@ public:
 	void read(const FileNode& node);
 
 private:
-	void add_top_candidate_safe(int x, int y, double s);
+	void add_side_candidate_safe(int x, int y, double s);
 };
 
 //Auxiliary functions
@@ -124,7 +124,7 @@ static ostream& operator << (ostream& out, P22D c) {
 	out << "Bottom candidate: " << c.get_candidate_bottom() << endl;
 	out << c.number_of_candidates() << " top candidate(s):" << endl;
 	for (uint i = 0; i < c.number_of_candidates(); ++i) {
-		out << "[" << c.y_top_coord(i) << " with score = " << c.score_top(i) << "]" << endl;
+		out << "[" << c.y_side_coord(i) << " with score = " << c.score_side(i) << "]" << endl;
 	}
 	return out;
 };

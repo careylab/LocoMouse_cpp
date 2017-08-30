@@ -13,6 +13,9 @@ LocoMouse_TM::LocoMouse_TM(LocoMouse_ParseInputs INPUTS) : LocoMouse(INPUTS) {
 
 	disk_filter.release();
 
+	//Loading algorithm specific parameters:
+	LocoMouse_TM_Parameters(CONFIG_FILE);
+	
 	//FIXME: Create function instead of repeating block:
 	if ((BB_SIDE_VIEW.width < ZERO_COL_PRE || BB_SIDE_VIEW.width < ZERO_COL_POST) & !LM_PARAMS.use_provided_bb) {
 		
@@ -38,6 +41,77 @@ LocoMouse_TM::LocoMouse_TM(LocoMouse_ParseInputs INPUTS) : LocoMouse(INPUTS) {
 	return;
 }
 
+void LocoMouse_TM::LocoMouse_TM_Parameters(std::string config_file_name) {
+
+	cv::FileStorage config_file(config_file_name, cv::FileStorage::READ);
+	if (!config_file.isOpened()) {
+		throw std::invalid_argument("Failed to read config file: " + config_file_name + ".");
+	}
+
+	int s_th, b_th, min_pixel_count, zcpre, zcpost, zrpre, zrpost, bbwith, bbheight_side;
+
+	//In case there are exceptions:
+	std::string error_message = "Invalid configuration parameter: ";
+
+	//Other parameters for BB computation:
+	config_file["bw_threshold_bottom"] >> b_th;
+
+	if (b_th < 0 || b_th > 255) {
+		error_message += "bw_threshold_bottom must belong to [0, 1].";
+		throw std::invalid_argument(error_message);
+	}
+	BOTTOM_THRESHOLD = (unsigned int) b_th;
+	
+	config_file["bw_threshold_side"] >> s_th; //0.01 in [0 255] range.
+
+	if (s_th < 0 || s_th > 255) {
+		error_message += "bw_threshold_side must belong to [0, 255].";
+		throw std::invalid_argument(error_message);
+	}
+	SIDE_THRESHOLD = (unsigned int)s_th;
+
+	config_file["min_pixel_count"] >> min_pixel_count;
+	
+	
+	if (min_pixel_count < 1) {
+		error_message += "Min pixel count must be at least 1.";
+		throw std::invalid_argument(error_message);
+	}
+
+	MIN_PIXEL_COUNT = (unsigned int) min_pixel_count;
+
+	config_file["zero_col_pre"] >> zcpre;
+	config_file["zero_col_post"] >> zcpost;
+	config_file["zero_row_pre"] >> zrpre;
+	config_file["zero_row_post"] >> zrpost;
+	
+	if (zcpost < 0 || zcpre < 0 || zrpost < 0 || zrpre < 0) {
+		error_message += "zero_*_* parameters range from 0 to the relevant size of the image.";
+		throw std::invalid_argument(error_message);
+	}
+
+	ZERO_COL_POST = (unsigned int)zcpost;
+	ZERO_COL_PRE = (unsigned int)zcpre;
+	ZERO_ROW_POST = (unsigned int)zrpost;
+	ZERO_ROW_PRE = (unsigned int)zrpre;
+
+	config_file["bb_width"] >> bbwith;
+
+	if (bbwith < 1) {
+		error_message += "bb_width must be at least 1 pixel.";
+		throw std::invalid_argument(error_message);
+	}
+	BB_WIDTH = (unsigned int)bbwith;
+
+	config_file["bb_height_side"] >> bbheight_side;
+
+	if (bbheight_side < 1) {
+		error_message += "bb_height_side must be at least 1 pixel.";
+		throw std::invalid_argument(error_message);
+	}
+	BB_HEIGHT_SIDE = (unsigned int)bbheight_side;
+}
+
 void LocoMouse_TM::computeBoundingBox() {
 
 	if (LM_PARAMS.LM_DEBUG) {
@@ -52,7 +126,6 @@ void LocoMouse_TM::computeBoundingBox() {
 
 	cv::Mat I_side_view = I(BB_SIDE_VIEW);
 
-
 	if (LM_PARAMS.LM_DEBUG) {
 		
 		DEBUG_TEXT << "BB_SIDE_VIEW: " << BB_SIDE_VIEW << std::endl;
@@ -60,7 +133,6 @@ void LocoMouse_TM::computeBoundingBox() {
 		DEBUG_TEXT << "I_side_view.size(): " << I_side_view.size() << std::endl;
 		DEBUG_TEXT << "----- Computing the bounding box position per frame: " << std::endl;
 	}
-
 
 	for (unsigned int i_frames = 0; i_frames < N_FRAMES; ++i_frames) {
 		
@@ -76,10 +148,10 @@ void LocoMouse_TM::computeBoundingBox() {
 
 	//FIXME: Make sure these quantities are initialised to these values:
 	//NOTE: By the definition of lims, the real dimensions should be [1]-[0] + 1. But to agree with the way MATLAB crops images, we drop the +1. This creates some inconsistencies as if the whole image is white, the width/height can never be the with/height of the image  
-	BB_SIDE_MOUSE.width = 400;
-	BB_SIDE_MOUSE.height = 150;
+	BB_SIDE_MOUSE.width = BB_WIDTH;
+	BB_SIDE_MOUSE.height = BB_HEIGHT_SIDE;
 	
-	BB_BOTTOM_MOUSE.width = 400;
+	BB_BOTTOM_MOUSE.width = BB_WIDTH;
 	BB_BOTTOM_MOUSE.height = BB_BOTTOM_VIEW.height;
 	return;
 }
@@ -151,18 +223,18 @@ void LocoMouse_TM::computeMouseBox_DD(cv::Mat &I_SIDE, double& bb_x) {
 	imfill(I_side_binary, I_side_binary);
 	
 	//Get the BB of the white region.
-	cv::Mat Row_top;
-	reduce(I_side_binary, Row_top, 0, CV_REDUCE_SUM, CV_32SC1);
+	cv::Mat Row_side;
+	reduce(I_side_binary, Row_side, 0, CV_REDUCE_SUM, CV_32SC1);
 
-	int lims_row_top[2];
+	int lims_row_side[2];
 
 	//Compute and assign values to bounding box:
 	//FIXME: Handle the empty image case. Perform the check inside the function and return a bool. Check after each run if the result was valid.
 	//Row_* marks x and with; Col_* marks y and height.
-	firstLastOverT(Row_top, N_COLS, lims_row_top, LM_PARAMS.min_pixel_visible);
+	firstLastOverT(Row_side, N_COLS, lims_row_side, LM_PARAMS.min_pixel_visible);
 
 	//Assigning the values to the bounding box vectors:
-	bb_x = (double)lims_row_top[1];
+	bb_x = (double)lims_row_side[1];
 	
 	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "Final bb_x location: " << bb_x << "." << std::endl;

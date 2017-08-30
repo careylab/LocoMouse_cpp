@@ -54,9 +54,7 @@ int main(int argc, char* argv[]) {
 		for (unsigned int i_frames = 0; i_frames < L->N_frames(); ++i_frames) {
 			
 			//Read new image:
-			std::cout << "Before" << std::endl;
 			L->readFrame();
-			std::cout << "After" << std::endl;
 
 			//Crop image bounding boxes for both views:
 			L->cropBoundingBox();

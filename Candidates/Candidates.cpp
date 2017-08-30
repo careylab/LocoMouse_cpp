@@ -91,19 +91,19 @@ int P22D::y_bottom_coord() const{
 }
 
 
-void P22D::add_top_candidate(Candidate C) {
-	add_top_candidate_safe(C.point().x, C.point().y, C.score());
+void P22D::add_side_candidate(Candidate C) {
+	add_side_candidate_safe(C.point().x, C.point().y, C.score());
 };
 
-void P22D::add_top_candidate(Point_<int> P, double s) {
-	add_top_candidate_safe(P.x, P.y, s);
+void P22D::add_side_candidate(Point_<int> P, double s) {
+	add_side_candidate_safe(P.x, P.y, s);
 }
 
-void P22D::add_top_candidate(int y, double s) {
-	add_top_candidate_safe(CB.point().x, y, s);
+void P22D::add_side_candidate(int y, double s) {
+	add_side_candidate_safe(CB.point().x, y, s);
 }
 
-void P22D::add_top_candidate_safe(int X, int Y, double S) {
+void P22D::add_side_candidate_safe(int X, int Y, double S) {
 	if (number_of_candidates() == 0) {
 		yt[0] = Y;
 		st[0] = S;
@@ -115,26 +115,26 @@ void P22D::add_top_candidate_safe(int X, int Y, double S) {
 }
 
 
-Point_<int> P22D::point_top(uint index) const{
+Point_<int> P22D::point_side(uint index) const{
 
 	assert(index < yt.size());
 	Point_<int> P(CB.point().x, yt[index]);
 	return P;
 }
 
-int P22D::y_top_coord(uint index) const {
+int P22D::y_side_coord(uint index) const {
 
 	assert(index < yt.size());
 	return yt[index];
 }
 
-double P22D::score_top(uint index) const{
+double P22D::score_side(uint index) const{
 
 	assert(index < yt.size());
 	return st[index];
 }
 
-Candidate P22D::get_candidate_top(uint index) const {
+Candidate P22D::get_candidate_side(uint index) const {
 
 	assert(index < yt.size());
 	return Candidate(CB.point().x, yt[index], st[index]);
@@ -157,14 +157,14 @@ int P22D::number_of_candidates() const {
 
 void P22D::write(FileStorage& fs) const {
 	fs << "{" << "Candidate_bottom" << CB;
-	fs << "n_candidates_top" << (int) yt.size(); //This should be number_of_candidates() but that has some problem with const...
-	fs << "Candidates_top" << "[:";
+	fs << "n_candidates_side" << (int) yt.size(); //This should be number_of_candidates() but that has some problem with const...
+	fs << "Candidates_side" << "[:";
 	for (int i = 0; i < yt.size(); ++i) {
 		fs << yt[i];
 	}
 	fs << "]";
 	
-	fs << "Scores_top" << "[:";
+	fs << "Scores_side" << "[:";
 	for (int i = 0; i < st.size(); ++i) {
 		fs << st[i];
 	}
@@ -176,7 +176,7 @@ void P22D::write(FileStorage& fs) const {
 void P22D::read(const FileNode& node) {
 	node["Candidate_bottom"] >> CB;
 	
-	FileNodeIterator it = node["Candidates_top"].begin(), it_end = node["Candidates_top"].end();
+	FileNodeIterator it = node["Candidates_side"].begin(), it_end = node["Candidates_side"].end();
 	vector<int> YT;
 	for (; it != it_end; ++it) {
 		int y = (int)*it;
@@ -184,7 +184,7 @@ void P22D::read(const FileNode& node) {
 		YT.push_back(y);
 	}
 
-	it = node["Scores_top"].begin(), it_end = node["Scores_top"].end();
+	it = node["Scores_side"].begin(), it_end = node["Scores_side"].end();
 	vector<double> ST;
 	for (; it != it_end; ++it) {
 		
@@ -194,7 +194,7 @@ void P22D::read(const FileNode& node) {
 	assert(ST.size() == YT.size());
 
 	for (int i = 0; i < YT.size(); ++i) {
-		add_top_candidate(YT[i], ST[i]);
+		add_side_candidate(YT[i], ST[i]);
 	}
 
 }

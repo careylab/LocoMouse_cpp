@@ -52,20 +52,19 @@ public:
 
 	int conn_comp_connectivity = 8; //Connectivity for the Connected components algorithm.
 	int median_filter_size = 11; //Must be an odd integer.
-	int min_pixel_visible = 0; //Minimum number of visible pixels to consider a valid BB boundary.
-	double top_bottom_min_overlap = 0.7; // Boxes must overlap for at least 70% for matches to be considered valid.
-	double maximum_normalized_beacon_distance = 0.4; //Candidates with normalized distance lower than this are suppressed.
-
+	int min_pixel_visible = 1; //Minimum number of visible pixels to consider a valid BB boundary.
+	double side_bottom_min_overlap = 0.7; // Boxes must overlap for at least 70% for matches to be considered valid.
+	
 	//FIXME: These parameters are set in pixels and they depend on the framerate and resolution of the video. For generalized behaviour calibrate with the training videos and ajdust to incoming box size and framerate. 
-	int max_displacement = 15; //Maximum displacement in pixels allowed between two frames (There is a velocity component added to this).
-	int max_displacement_top = 15;
-	int occlusion_grid_spacing_pixels_top = 20;
-	int occlusion_grid_spacing_pixels = 20; //Spacing of the occlusion grid in pixels, highly dependent on resolution.
+	int max_displacement_bottom = 15; //Maximum displacement in pixels allowed between two frames (There is a velocity component added to this).
+	int max_displacement_side = 15;
+	int occlusion_grid_spacing_pixels_side = 20;
+	int occlusion_grid_spacing_pixels_bottom = 20; //Spacing of the occlusion grid in pixels, highly dependent on resolution.
 
-	double body_proportion_bounding_box = 0.75; //The occlusion grid extends for only this percentage of the BB on the right side.
+	double occlusion_grid_max_width = 0.75; //The occlusion grid extends for only this percentage of the BB on the right side.
 	double tail_sub_bounding_box = 0.6; //The percentage counting from the left of the box where the tail is looked for.
-	double alpha_vel = 1E-1; //Relative term for the velocity costs on the match2nd tracking algorithm.
-	double alpha_vel_top = 100;
+	double alpha_vel_bottom = 1E-1; //Relative term for the velocity costs on the match2nd tracking algorithm.
+	double alpha_vel_side = 100;
 	double pairwise_occluded_cost = 1E-2; //Cost for moving to and between occluded points on the match2nd algorithm.
 	int moving_average_window = 5; //Must be odd. 
 	
@@ -264,9 +263,9 @@ protected:
 	void computeMouseBox(cv::Mat &I_median, cv::Mat &I, cv::Mat &I_side_view, cv::Mat &I_bottom_view, double& bb_x, double& bb_y_bottom, double& bb_y_side, double& bb_width, double& bb_height_bottom, double& bb_height_side, const LocoMouse_Parameters &LM_PARAMS);
 	
 
-	MATSPARSE pairwisePotential(vector<Candidate> &Ci, vector<Candidate> &Cip1, Point_<double> &grid_mapping, double grid_spacing, vector< Point_<double> > &ONGi, Size ONG_size, double max_displacement, double alpha_vel, double pairwise_occluded_cost);
+	MATSPARSE pairwisePotential(vector<Candidate> &Ci, vector<Candidate> &Cip1, Point_<double> &grid_mapping, double grid_spacing, vector< Point_<double> > &ONGi, Size ONG_size, double max_displacement_bottom, double alpha_vel_bottom, double pairwise_occluded_cost);
 
-	MATSPARSE pairwisePotential_SideView(const vector<uint> &Zi, const vector<uint> &Zip1, double grid_mapping, double grid_spacing, const vector<uint> &ONGi, const unsigned int Nong, const double max_displacement, const double alpha_vel, const double pairwise_occluded_cost);
+	MATSPARSE pairwisePotential_SideView(const vector<uint> &Zi, const vector<uint> &Zip1, double grid_mapping, double grid_spacing, const vector<uint> &ONGi, const unsigned int Nong, const double max_displacement_bottom, const double alpha_vel_bottom, const double pairwise_occluded_cost);
 
 	MyMat unaryCostBox(vector<Candidate> &p_candidates, cv::Rect &BB, vector<LocoMouse_LocationPrior> location_prior);
 
@@ -274,21 +273,21 @@ protected:
 
 	void exportTracksBottom(const cv::Mat& T_bottom, const vector< vector <Candidate> > &candidates_bottom, const string feature_name, const unsigned int N_features);
 
-	void exportPointTracks(const cv::Mat& T_bottom, const cv::Mat &T_top, const vector< vector<P22D> > &candidates_bottom_top_matched, const string feature_name, const unsigned int N_features);
+	void exportPointTracks(const cv::Mat& T_bottom, const cv::Mat &T_side, const vector< vector<P22D> > &candidates_bottom_side_matched, const string feature_name, const unsigned int N_features);
 
 	void exportLineTracks(std::vector <cv::Mat> Tracks, std::string track_name, int N_line_points);
 
-	vector<P22D> matchViews(const cv::Mat &boolD, const cv::Mat &D_top_weight, const vector<Candidate> &C_b, const vector<Candidate> &C_t, bool vel_check, LocoMouse_Feature &F, const cv::Mat &Ibbb, const cv::Mat &Itbb, const cv::Mat &Ibbb_prev, const cv::Mat &Itbb_prev, const cv::Point_<int> padding_pre_bottom, const cv::Point_<int> padding_pre_side, bool debug);
+	vector<P22D> matchViews(const cv::Mat &boolD, const cv::Mat &D_side_weight, const vector<Candidate> &C_b, const vector<Candidate> &C_t, bool vel_check, LocoMouse_Feature &F, const cv::Mat &Ibbb, const cv::Mat &Itbb, const cv::Mat &Ibbb_prev, const cv::Mat &Itbb_prev, const cv::Point_<int> padding_pre_bottom, const cv::Point_<int> padding_pre_side, bool debug);
 
 	cv::Mat xDist(const vector<Candidate> &P1, const vector <Candidate> &P2);
 
 	vector<P22D> matchingWithVelocityConstraint(vector<Candidate>& Candidates_b, vector<Candidate>& Candidates_t, const cv::Mat& Ibbb, const cv::Mat& Itbb, const cv::Mat& Ibbb_prev, const cv::Mat& Itbbb_prev, const cv::Point_<int> padding_pre_bottom, const cv::Point_<int> padding_pre_side, bool vel_check, LocoMouse_Feature& F, double T, bool debug);
 
-	void computeMouseBoxSize(std::vector<double> &bb_w, std::vector<double> &bb_hb, std::vector<double> &bb_ht, cv::Rect &BB_top, cv::Rect &BB_bottom);
+	void computeMouseBoxSize(std::vector<double> &bb_w, std::vector<double> &bb_hb, std::vector<double> &bb_ht, cv::Rect &BB_side, cv::Rect &BB_bottom);
 
 	//void cropImage(cv::Mat &Iin, cv::Mat &Iout, cv::Rect BB);
 
-	cv::Mat bestSideViewMatch(const cv::Mat& T, const vector< vector<P22D> > &candidates_bottom_top_matched, const vector<uint> &ONG_top, const unsigned int lowest_point, const unsigned int N_features);
+	cv::Mat bestSideViewMatch(const cv::Mat& T, const vector< vector<P22D> > &candidates_bottom_side_matched, const vector<uint> &ONG_side, const unsigned int lowest_point, const unsigned int N_features);
 
 	cv::Mat detectLineCandidates(const LocoMouse_Feature &F, const unsigned int N_line_points, cv::Mat & Mask);
 
@@ -423,7 +422,7 @@ void firstLastOverT(const cv::Mat& values, const unsigned int L, T first_last[2]
 	int index = 0;
 
 	for (unsigned int i = 0; i < L; ++i) {
-		if (p[i] > th) {
+		if (p[i] >= th) {
 
 			first_last[index] = (T) i;
 
