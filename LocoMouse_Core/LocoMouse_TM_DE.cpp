@@ -77,10 +77,6 @@ void LocoMouse_TM_DE::computeMouseBox_DE(cv::Mat &I_SIDE, double& bb_x) {
 	Mat I_side_binary;
 	threshold(I_SIDE, I_side_binary, SIDE_THRESHOLD, 1, 0);//MATLAB has the threshold as a percentage. So 1% is 2.55 out of 255 
 	
-	if (CURRENT_FRAME == 1) {
-		imwrite("th.png", I_side_binary);
-	}
-
 	//I_side_binary = bwAreaOpen(I_side_binary);
 
 		//Filter with the disk filter. To replicate results, load filter from MATLAB.
@@ -93,27 +89,23 @@ void LocoMouse_TM_DE::computeMouseBox_DE(cv::Mat &I_SIDE, double& bb_x) {
 	//selectLargestRegion(I_side_binary, I_side_binary);
 	
 	//Get the limits of the largest object:
-	cv::Mat Row_top;
-	cv::reduce(I_side_binary, Row_top, 0, CV_REDUCE_SUM, CV_32FC1);
+	cv::Mat Row_side;
+	cv::reduce(I_side_binary, Row_side, 0, CV_REDUCE_SUM, CV_32FC1);
 
-	if (CURRENT_FRAME == 1) {
-		imwrite("row_top.png", Row_top);
-	}
-
-	int lims_row_top[2];
+	int lims_row_side[2];
 
 	//Compute and assign values to bounding box:
 	//FIXME: Handle the empty image case. Perform the check inside the function and return a bool. Check after each run if the result was valid.
 	//Row_* marks x and with; Col_* marks y and height.
-	firstLastOverT(Row_top, N_COLS, lims_row_top, MIN_PIXEL_COUNT);
+	firstLastOverT(Row_side, N_COLS, lims_row_side, MIN_PIXEL_COUNT);
 
 
 	//Assigning the values to the bounding box vectors:
-	//if (lims_row_top[1] < 0) {
-	//	std::cout << CURRENT_FRAME << " " << lims_row_top[0] << " " << lims_row_top[1] << std::endl;
+	//if (lims_row_side[1] < 0) {
+	//	std::cout << CURRENT_FRAME << " " << lims_row_side[0] << " " << lims_row_side[1] << std::endl;
 	//}
 
-	bb_x = std::min((double) (BB_SIDE_VIEW.width-1), (double) lims_row_top[1] * WIDTH_MARGIN);
+	bb_x = std::min((double) (BB_SIDE_VIEW.width-1), (double) lims_row_side[1] * WIDTH_MARGIN);
 
 	if (LM_PARAMS.LM_DEBUG)
 		DEBUG_TEXT << "Final bb_x location: " << bb_x << "." << std::endl;

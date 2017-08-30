@@ -50,49 +50,44 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 		throw std::invalid_argument(error_message);
 	}
 
-	config_file["top_bottom_min_overlap"] >> top_bottom_min_overlap; // Boxes must overlap for at least 70% for matches to be considered valid.
-	if ((top_bottom_min_overlap < 0) || (top_bottom_min_overlap > 1)) {
-		error_message += "top_bottom_min_overlap must belong to [0,1]. Was " + std::to_string(top_bottom_min_overlap) + ".";
+	config_file["side_bottom_min_overlap"] >> side_bottom_min_overlap; // Boxes must overlap for at least 70% for matches to be considered valid.
+	if ((side_bottom_min_overlap < 0) || (side_bottom_min_overlap > 1)) {
+		error_message += "side_bottom_min_overlap must belong to [0,1]. Was " + std::to_string(side_bottom_min_overlap) + ".";
 		throw std::invalid_argument(error_message);
 	}
 
-	config_file["maximum_normalized_beacon_distance"] >> maximum_normalized_beacon_distance; //Candidates with normalized distance lower than this are suppressed.
-	if ((maximum_normalized_beacon_distance < 0) || (maximum_normalized_beacon_distance > 1)) {
-		error_message += "maximum_normalized_beacon_distance must belong to [0,1]. Was " + std::to_string(maximum_normalized_beacon_distance) + ".";
-		throw std::invalid_argument(error_message);
-	}
 	//FIXME: These two parameters are set in pixels and they depend on the framerate and resolution of the video. Calibrate with the training videos and set them as percentages of the bounding box dimension for a generalized behaviour.
-	config_file["max_displacement"] >> max_displacement; //Maximum displacement in pixels allowed between two frames (There is a velocity component added to this).
-	if (max_displacement < 0) {
-		error_message += "max_displacement must be non-negative. Was " + std::to_string(max_displacement) + ".";
+	config_file["max_displacement_bottom"] >> max_displacement_bottom; //Maximum displacement in pixels allowed between two frames (There is a velocity component added to this).
+	if (max_displacement_bottom < 0) {
+		error_message += "max_displacement_bottom must be non-negative. Was " + std::to_string(max_displacement_bottom) + ".";
 		throw std::invalid_argument(error_message);
 
 	}
 
-	config_file["max_displacement_top"] >> max_displacement_top;
-	if (max_displacement_top < 0) {
-		error_message += "max_displacement_top must be non-negative. Was " + std::to_string(max_displacement_top) + ".";
+	config_file["max_displacement_side"] >> max_displacement_side;
+	if (max_displacement_side < 0) {
+		error_message += "max_displacement_side must be non-negative. Was " + std::to_string(max_displacement_side) + ".";
 
 		throw std::invalid_argument(error_message);
 	}
 
-	config_file["occlusion_grid_spacing_pixels_top"] >> occlusion_grid_spacing_pixels_top;
-	if (occlusion_grid_spacing_pixels_top < 0) {
-		error_message += "occlusion_grid_spacing_pixels_top must be non-negative. Was " + std::to_string(occlusion_grid_spacing_pixels_top) + ".";
+	config_file["occlusion_grid_spacing_pixels_side"] >> occlusion_grid_spacing_pixels_side;
+	if (occlusion_grid_spacing_pixels_side < 0) {
+		error_message += "occlusion_grid_spacing_pixels_side must be non-negative. Was " + std::to_string(occlusion_grid_spacing_pixels_side) + ".";
 
 		throw std::invalid_argument(error_message);
 	}
 
-	config_file["occlusion_grid_spacing_pixels"] >> occlusion_grid_spacing_pixels; //Spacing of the occlusion grid in pixels, highly dependent on resolution.
-	if (occlusion_grid_spacing_pixels < 0) {
-		error_message += "occlusion_grid_spacing_pixels must be non-negative.. Was " + std::to_string(occlusion_grid_spacing_pixels) + ".";
+	config_file["occlusion_grid_spacing_pixels_bottom"] >> occlusion_grid_spacing_pixels_bottom; //Spacing of the occlusion grid in pixels, highly dependent on resolution.
+	if (occlusion_grid_spacing_pixels_bottom < 0) {
+		error_message += "occlusion_grid_spacing_pixels_bottom must be non-negative.. Was " + std::to_string(occlusion_grid_spacing_pixels_bottom) + ".";
 
 		throw std::invalid_argument(error_message);
 	}
 
-	config_file["body_proportion_bounding_box"] >> body_proportion_bounding_box; //The occlusion grid extends for only this percentage of the BB on the right side.
-	if ((body_proportion_bounding_box < 0) || (body_proportion_bounding_box > 1)) {
-		error_message += "body_proportion_bounding_box must be non-negative. Was " + std::to_string(body_proportion_bounding_box) + ".";
+	config_file["occlusion_grid_max_width"] >> occlusion_grid_max_width; //The occlusion grid extends for only this percentage of the BB on the right side.
+	if ((occlusion_grid_max_width < 0) || (occlusion_grid_max_width > 1)) {
+		error_message += "occlusion_grid_max_width must be non-negative. Was " + std::to_string(occlusion_grid_max_width) + ".";
 
 		throw std::invalid_argument(error_message);
 	}
@@ -103,15 +98,15 @@ LocoMouse_Parameters::LocoMouse_Parameters(std::string config_file_name) {
 		throw std::invalid_argument(error_message);
 	}
 
-	config_file["alpha_vel"] >> alpha_vel; //Relative term for the velocity costs on the match2nd tracking algorithm.
-	if (alpha_vel < 0) {
-		error_message += "alpha_vel must be non-negative. Was " + std::to_string(alpha_vel) + ".";
+	config_file["alpha_vel_bottom"] >> alpha_vel_bottom; //Relative term for the velocity costs on the match2nd tracking algorithm.
+	if (alpha_vel_bottom < 0) {
+		error_message += "alpha_vel_bottom must be non-negative. Was " + std::to_string(alpha_vel_bottom) + ".";
 		throw std::invalid_argument(error_message);
 	}
 
-	config_file["alpha_vel_top"] >> alpha_vel_top;
-	if (alpha_vel_top < 0) {
-		error_message += "alpha_vel_top must be non-negative. Was " + std::to_string(alpha_vel_top) + ".";
+	config_file["alpha_vel_side"] >> alpha_vel_side;
+	if (alpha_vel_side < 0) {
+		error_message += "alpha_vel_side must be non-negative. Was " + std::to_string(alpha_vel_side) + ".";
 		throw std::invalid_argument(error_message);
 
 	}
@@ -267,18 +262,17 @@ LocoMouse_Parameters& LocoMouse_Parameters::operator=(LocoMouse_Parameters &&oth
 	conn_comp_connectivity = other.conn_comp_connectivity;
 	median_filter_size = other.median_filter_size;
 	min_pixel_visible = other.min_pixel_visible;
-	top_bottom_min_overlap = other.top_bottom_min_overlap;
-	maximum_normalized_beacon_distance = other.maximum_normalized_beacon_distance;
+	side_bottom_min_overlap = other.side_bottom_min_overlap;
+	
+	max_displacement_bottom = other.max_displacement_bottom;
+	max_displacement_side = other.max_displacement_side;
+	occlusion_grid_spacing_pixels_side = other.occlusion_grid_spacing_pixels_side;
+	occlusion_grid_spacing_pixels_bottom = other.occlusion_grid_spacing_pixels_bottom;
 
-	max_displacement = other.max_displacement;
-	max_displacement_top = other.max_displacement_top;
-	occlusion_grid_spacing_pixels_top = other.occlusion_grid_spacing_pixels_top;
-	occlusion_grid_spacing_pixels = other.occlusion_grid_spacing_pixels;
-
-	body_proportion_bounding_box = other.body_proportion_bounding_box;
+	occlusion_grid_max_width = other.occlusion_grid_max_width;
 	tail_sub_bounding_box = other.tail_sub_bounding_box;
-	alpha_vel = other.alpha_vel;
-	alpha_vel_top = other.alpha_vel_top;
+	alpha_vel_bottom = other.alpha_vel_bottom;
+	alpha_vel_side = other.alpha_vel_side;
 	pairwise_occluded_cost = other.pairwise_occluded_cost;
 	moving_average_window = other.moving_average_window;
 
@@ -729,14 +723,14 @@ void LocoMouse::initializeFeatureLoop() {
 	//Initializing the ONG and dependent variables:
 	//FIXME: Center the grid on the image using integer division:
 	//Grid of Occlusion Points: 
-	unsigned int ngrid_y = ((BB_BOTTOM_MOUSE.height - LM_PARAMS.occlusion_grid_spacing_pixels) / LM_PARAMS.occlusion_grid_spacing_pixels) + 1;
-	unsigned int ngrid_x = ((LM_PARAMS.body_proportion_bounding_box * BB_BOTTOM_MOUSE.width) - LM_PARAMS.occlusion_grid_spacing_pixels) / LM_PARAMS.occlusion_grid_spacing_pixels + 1;
+	unsigned int ngrid_y = ((BB_BOTTOM_MOUSE.height - LM_PARAMS.occlusion_grid_spacing_pixels_bottom) / LM_PARAMS.occlusion_grid_spacing_pixels_bottom) + 1;
+	unsigned int ngrid_x = ((LM_PARAMS.occlusion_grid_max_width * BB_BOTTOM_MOUSE.width) - LM_PARAMS.occlusion_grid_spacing_pixels_bottom) / LM_PARAMS.occlusion_grid_spacing_pixels_bottom + 1;
 
 	unsigned int Nong = ngrid_x * ngrid_y;
 
 	ONG_size = cv::Size(ngrid_x, ngrid_y);
 
-	ONG_BR_corner = cv::Point_<double>(BB_BOTTOM_MOUSE.width - 1 - LM_PARAMS.occlusion_grid_spacing_pixels / 2, BB_BOTTOM_MOUSE.height - 1 - LM_PARAMS.occlusion_grid_spacing_pixels / 2);
+	ONG_BR_corner = cv::Point_<double>(BB_BOTTOM_MOUSE.width - 1 - LM_PARAMS.occlusion_grid_spacing_pixels_bottom / 2, BB_BOTTOM_MOUSE.height - 1 - LM_PARAMS.occlusion_grid_spacing_pixels_bottom / 2);
 
 	ONG.reserve(Nong);
 	cv::Point_<double> P = cv::Point_<double>(0, 0);
@@ -749,19 +743,19 @@ void LocoMouse::initializeFeatureLoop() {
 
 		for (unsigned int i = 0; i < ngrid_x; ++i) {
 
-			ONG[j * ngrid_x + i] = ONG_BR_corner - cv::Point_<double>(i * LM_PARAMS.occlusion_grid_spacing_pixels, j * LM_PARAMS.occlusion_grid_spacing_pixels);
+			ONG[j * ngrid_x + i] = ONG_BR_corner - cv::Point_<double>(i * LM_PARAMS.occlusion_grid_spacing_pixels_bottom, j * LM_PARAMS.occlusion_grid_spacing_pixels_bottom);
 
 		}
 	}
 
 	//Side view ONG:
-	unsigned int Nong_top = ((BB_SIDE_MOUSE.height - LM_PARAMS.occlusion_grid_spacing_pixels) / LM_PARAMS.occlusion_grid_spacing_pixels) + 1;
-	ONG_SIDE.reserve(Nong_top);
+	unsigned int Nong_side = ((BB_SIDE_MOUSE.height - LM_PARAMS.occlusion_grid_spacing_pixels_side) / LM_PARAMS.occlusion_grid_spacing_pixels_side) + 1;
+	ONG_SIDE.reserve(Nong_side);
 
-	ONG_SIDE_LOWEST_POINT = (BB_SIDE_MOUSE.height - 1 - LM_PARAMS.occlusion_grid_spacing_pixels / 2);
+	ONG_SIDE_LOWEST_POINT = (BB_SIDE_MOUSE.height - 1 - LM_PARAMS.occlusion_grid_spacing_pixels_side / 2);
 
-	for (unsigned int i_top = 0; i_top < Nong_top; i_top++) {
-		ONG_SIDE.push_back(ONG_SIDE_LOWEST_POINT - (i_top * LM_PARAMS.occlusion_grid_spacing_pixels_top));
+	for (unsigned int i_side = 0; i_side < Nong_side; i_side++) {
+		ONG_SIDE.push_back(ONG_SIDE_LOWEST_POINT - (i_side * LM_PARAMS.occlusion_grid_spacing_pixels_side));
 	}
 
 	//Resetting the video pointer as the computations of the bounding box could have read it:
@@ -908,10 +902,10 @@ void LocoMouse::computePairwiseCostsBottom() {
 	if (CURRENT_FRAME > 0) {
 
 		//Computing pairwise potentials:
-		MATSPARSE temp = pairwisePotential(CANDIDATES_BOTTOM_PAW.end()[-2], CANDIDATES_BOTTOM_PAW.end()[-1], ONG_BR_corner, (double)LM_PARAMS.occlusion_grid_spacing_pixels, ONG, ONG_size, LM_PARAMS.max_displacement, LM_PARAMS.alpha_vel, LM_PARAMS.pairwise_occluded_cost);
+		MATSPARSE temp = pairwisePotential(CANDIDATES_BOTTOM_PAW.end()[-2], CANDIDATES_BOTTOM_PAW.end()[-1], ONG_BR_corner, (double)LM_PARAMS.occlusion_grid_spacing_pixels_bottom, ONG, ONG_size, LM_PARAMS.max_displacement_bottom, LM_PARAMS.alpha_vel_bottom, LM_PARAMS.pairwise_occluded_cost);
 		PAIRWISE_BOTTOM_PAW.push_back(temp);
 
-		temp = pairwisePotential(CANDIDATES_BOTTOM_SNOUT.end()[-2], CANDIDATES_BOTTOM_SNOUT.end()[-1], ONG_BR_corner, (double)LM_PARAMS.occlusion_grid_spacing_pixels, ONG, ONG_size, LM_PARAMS.max_displacement, LM_PARAMS.alpha_vel, LM_PARAMS.pairwise_occluded_cost);
+		temp = pairwisePotential(CANDIDATES_BOTTOM_SNOUT.end()[-2], CANDIDATES_BOTTOM_SNOUT.end()[-1], ONG_BR_corner, (double)LM_PARAMS.occlusion_grid_spacing_pixels_bottom, ONG, ONG_size, LM_PARAMS.max_displacement_bottom, LM_PARAMS.alpha_vel_bottom, LM_PARAMS.pairwise_occluded_cost);
 		PAIRWISE_BOTTOM_SNOUT.push_back(temp);
 
 	}
@@ -965,38 +959,38 @@ void LocoMouse::computeMouseBox(cv::Mat &I_median, cv::Mat &I, cv::Mat &I_side_v
 	largestBWAreaObject(I_bottom_view, I_bottom_view);
 	
 	//Checking for first and last positions to exceed min_pixel_visible:
-	cv::Mat Row_top, Row_bottom, Col_top, Col_bottom;
+	cv::Mat Row_side, Row_bottom, Col_side, Col_bottom;
 
-	cv::reduce(I_side_view, Row_top, 0, CV_REDUCE_SUM, CV_32SC1);
-	cv::reduce(I_side_view, Col_top, 1, CV_REDUCE_SUM, CV_32SC1);
+	cv::reduce(I_side_view, Row_side, 0, CV_REDUCE_SUM, CV_32SC1);
+	cv::reduce(I_side_view, Col_side, 1, CV_REDUCE_SUM, CV_32SC1);
 
 	cv::reduce(I_bottom_view, Row_bottom, 0, CV_REDUCE_SUM, CV_32SC1);
 	cv::reduce(I_bottom_view, Col_bottom, 1, CV_REDUCE_SUM, CV_32SC1);
 
-	int lims_row_top[2], lims_col_top[2], lims_row_bottom[2], lims_col_bottom[2];
+	int lims_row_side[2], lims_col_side[2], lims_row_bottom[2], lims_col_bottom[2];
 
 	//Compute and assign values to bounding box:
 	//NOTE: If there are no values above the threshold both vector entries are 0;
 	//Row_* marks x and with; Col_* marks y and height.
-	firstLastOverT(Row_top, I.cols, lims_row_top, LM_PARAMS.min_pixel_visible);
+	firstLastOverT(Row_side, I.cols, lims_row_side, LM_PARAMS.min_pixel_visible);
 	firstLastOverT(Row_bottom, I.cols, lims_row_bottom, LM_PARAMS.min_pixel_visible);
-	firstLastOverT(Col_top, I_side_view.rows, lims_col_top, LM_PARAMS.min_pixel_visible);
+	firstLastOverT(Col_side, I_side_view.rows, lims_col_side, LM_PARAMS.min_pixel_visible);
 	firstLastOverT(Col_bottom, I_bottom_view.rows, lims_col_bottom, LM_PARAMS.min_pixel_visible);
 
 
 	//FIXME: What if there was no BB in the image? firstLastOverT will return -1 which if left as is will distort the position of the BB.
 	//Assigning the values to the bounding box vectors:
-	bb_x = (lims_row_bottom[1] > lims_row_top[1]) ? (double)lims_row_bottom[1] : (double)lims_row_top[1];
+	bb_x = (lims_row_bottom[1] > lims_row_side[1]) ? (double)lims_row_bottom[1] : (double)lims_row_side[1];
 	bb_y_bottom = (double)lims_col_bottom[1];
-	bb_y_side = (double)lims_col_top[1];
+	bb_y_side = (double)lims_col_side[1];
 
 	//FIXME: By the definition of lims, the real dimensions should be [1]-[0] + 1 due to indicies starting at 0. Was kept like this to be consistent with MATLAB.
-	unsigned int wt = lims_row_top[1] - lims_row_top[0];
+	unsigned int wt = lims_row_side[1] - lims_row_side[0];
 	unsigned int wb = lims_row_bottom[1] - lims_row_bottom[0];
 
 	bb_width = (wt > wb) ? (double)wt : (double)wb;
 	bb_height_bottom = (double)(lims_col_bottom[1] - lims_col_bottom[0]);
-	bb_height_side = (double)(lims_col_top[1] - lims_col_top[0]);
+	bb_height_side = (double)(lims_col_side[1] - lims_col_side[0]);
 
 	return;
 
@@ -1012,10 +1006,10 @@ void LocoMouse::matchBottomSideCandidates() {
 	cv::Point_<int> padding_pre_bottom = cv::Point_<int>(M.size_pre_bottom().width, M.size_pre_bottom().height);
 	cv::Point_<int> padding_pre_side = cv::Point_<int>(M.size_pre_side().width, M.size_pre_side().height);
 
-	std::vector <P22D> P = matchingWithVelocityConstraint(CANDIDATES_BOTTOM_PAW.back(), CANDIDATES_SIDE_PAW.back(), I_BOTTOM_MOUSE_PAD, I_SIDE_MOUSE_PAD, I_BOTTOM_MOUSE_PAD_PREV, I_SIDE_MOUSE_PAD_PREV, padding_pre_bottom, padding_pre_side, CURRENT_FRAME > 0, M.paw, LM_PARAMS.top_bottom_min_overlap, false);
+	std::vector <P22D> P = matchingWithVelocityConstraint(CANDIDATES_BOTTOM_PAW.back(), CANDIDATES_SIDE_PAW.back(), I_BOTTOM_MOUSE_PAD, I_SIDE_MOUSE_PAD, I_BOTTOM_MOUSE_PAD_PREV, I_SIDE_MOUSE_PAD_PREV, padding_pre_bottom, padding_pre_side, CURRENT_FRAME > 0, M.paw, LM_PARAMS.side_bottom_min_overlap, false);
 	CANDIDATES_MATCHED_VIEWS_PAW.push_back(P);
 
-	P = matchingWithVelocityConstraint(CANDIDATES_BOTTOM_SNOUT.back(), CANDIDATES_SIDE_SNOUT.back(), I_BOTTOM_MOUSE_PAD, I_SIDE_MOUSE_PAD, I_BOTTOM_MOUSE_PAD_PREV, I_SIDE_MOUSE_PAD_PREV, padding_pre_bottom, padding_pre_side, CURRENT_FRAME > 0, M.snout, LM_PARAMS.top_bottom_min_overlap, false);
+	P = matchingWithVelocityConstraint(CANDIDATES_BOTTOM_SNOUT.back(), CANDIDATES_SIDE_SNOUT.back(), I_BOTTOM_MOUSE_PAD, I_SIDE_MOUSE_PAD, I_BOTTOM_MOUSE_PAD_PREV, I_SIDE_MOUSE_PAD_PREV, padding_pre_bottom, padding_pre_side, CURRENT_FRAME > 0, M.snout, LM_PARAMS.side_bottom_min_overlap, false);
 	CANDIDATES_MATCHED_VIEWS_SNOUT.push_back(P);
 
 	if (LM_PARAMS.LM_DEBUG) {
@@ -1052,7 +1046,7 @@ std::vector<P22D> LocoMouse::matchingWithVelocityConstraint(std::vector<Candidat
 
 	int ovlp = (F.size_bottom().width * (1 - T));
 	int N_bottom = Candidates_b.size();
-	int N_top = Candidates_t.size();
+	int N_side = Candidates_t.size();
 	std::vector<P22D> Candidates_bt;
 	if (N_bottom == 0) {
 		if (LM_PARAMS.LM_DEBUG)
@@ -1063,19 +1057,19 @@ std::vector<P22D> LocoMouse::matchingWithVelocityConstraint(std::vector<Candidat
 
 	//Calculate Pairwise Distance Matrix:
 	//It would be faster to calculate distances only if motion constraints are valid. But motion constraints are not reliable,thus only if multiple matches exist should they be applied.
-	cv::Mat Distances, D_top_weight, boolD;
-	if (N_top > 0) {
+	cv::Mat Distances, D_side_weight, boolD;
+	if (N_side > 0) {
 		Distances = xDist(Candidates_b, Candidates_t);
 
 		boolD = Distances <= ovlp;
 		normalize(boolD, boolD, 0, 1, NORM_MINMAX, -1);
 
-		Distances.convertTo(D_top_weight, CV_64FC1);
+		Distances.convertTo(D_side_weight, CV_64FC1);
 
-		D_top_weight = 1 - (D_top_weight / (double)ovlp);
+		D_side_weight = 1 - (D_side_weight / (double)ovlp);
 	}
 
-	return matchViews(boolD, D_top_weight, Candidates_b, Candidates_t, vel_check, F, Ibbb, Itbb, Ibbb_prev, Itbbb_prev, padding_pre_bottom, padding_pre_side, debug);
+	return matchViews(boolD, D_side_weight, Candidates_b, Candidates_t, vel_check, F, Ibbb, Itbb, Ibbb_prev, Itbbb_prev, padding_pre_bottom, padding_pre_side, debug);
 }
 
 cv::Mat LocoMouse::xDist(const std::vector<Candidate> &P1, const std::vector <Candidate> &P2) {
@@ -1112,7 +1106,7 @@ cv::Mat LocoMouse::xDist(const std::vector<Candidate> &P1, const std::vector <Ca
 	return D;
 }
 
-std::vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_top_weight, const std::vector<Candidate> &C_b, const std::vector<Candidate> &C_t, bool vel_check, LocoMouse_Feature &F, const cv::Mat &Ibbb, const cv::Mat &Itbb, const cv::Mat &Ibbb_prev, const cv::Mat &Itbb_prev, const cv::Point_<int> padding_pre_bottom, const cv::Point_<int> padding_pre_side, bool debug) {
+std::vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_side_weight, const std::vector<Candidate> &C_b, const std::vector<Candidate> &C_t, bool vel_check, LocoMouse_Feature &F, const cv::Mat &Ibbb, const cv::Mat &Itbb, const cv::Mat &Ibbb_prev, const cv::Mat &Itbb_prev, const cv::Point_<int> padding_pre_bottom, const cv::Point_<int> padding_pre_side, bool debug) {
 	//FIXME: VERY IMPORTANT - I'm assuming there are not more than 255 candidates per match. This is a very safe bet, as if it happens the data is wrong for sure.
 
 	if (LM_PARAMS.LM_DEBUG)
@@ -1121,11 +1115,11 @@ std::vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_t
 
 	std::vector<P22D> C;
 
-	int N_top = C_t.size();
+	int N_side = C_t.size();
 	int N_bottom = C_b.size();
 
 	if (LM_PARAMS.LM_DEBUG) {
-		DEBUG_TEXT << "N_bottom, N_top: " << N_bottom << " " << N_top << std::endl;
+		DEBUG_TEXT << "N_bottom, N_side: " << N_bottom << " " << N_side << std::endl;
 	}
 
 	if (N_bottom == 0) {
@@ -1134,21 +1128,21 @@ std::vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_t
 
 	//Predefined function constants:
 	double moving_alpha_bottom = 0.02;
-	double moving_alpha_top = 0.05;
+	double moving_alpha_side = 0.05;
 	double moving_threshold = 25;
 
 	//Avoiding the moving status twice for top candidates since we are doing nested loops:
-	std::vector<bool> need_to_check(N_top, true);
-	std::vector<bool> moving_t(N_top, false);
+	std::vector<bool> need_to_check(N_side, true);
+	std::vector<bool> moving_t(N_side, false);
 
 	cv::Mat M_check_velocity, M_t_per_b_match;
-	float *top_per_bottom_match = 0, *bottom_per_top_match = 0;
+	float *top_per_bottom_match = 0, *bottom_per_side_match = 0;
 
-	if (N_top > 0) {
+	if (N_side > 0) {
 		//Reduction of D to find how many bottom candidates correspond to each top candidate.
 
 		cv::reduce(boolD, M_check_velocity, 0, CV_REDUCE_SUM, CV_32FC1);
-		bottom_per_top_match = M_check_velocity.ptr<float>(0);
+		bottom_per_side_match = M_check_velocity.ptr<float>(0);
 
 		//Reduction of D to find how many top candidates correspond to each bottom candidate.
 
@@ -1164,9 +1158,9 @@ std::vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_t
 		}
 
 		//No top candidates at all:
-		if (N_top == 0) {
+		if (N_side == 0) {
 			if (LM_PARAMS.LM_DEBUG) {
-				DEBUG_TEXT << "N_top is 0." << std::endl;
+				DEBUG_TEXT << "N_side is 0." << std::endl;
 			}
 			C.push_back(P22D(C_b[i_bottom], Candidate(-1, -1, -1)));
 			continue;
@@ -1194,23 +1188,23 @@ std::vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_t
 
 			//Top view matches to current view:
 			const uchar* pD = boolD.ptr<uchar>(i_bottom);
-			const double* pDTW = D_top_weight.ptr<double>(i_bottom);
+			const double* pDTW = D_side_weight.ptr<double>(i_bottom);
 
 			if (LM_PARAMS.LM_DEBUG) {
 				DEBUG_TEXT << "Multiple matches, looping." << std::endl;
 			}
 
-			for (int i_top = 0; i_top < N_top; i_top++) {
+			for (int i_side = 0; i_side < N_side; i_side++) {
 
 				if (LM_PARAMS.LM_DEBUG) {
-					DEBUG_TEXT << "i_top: " << i_top << std::endl;
+					DEBUG_TEXT << "i_side: " << i_side << std::endl;
 				}
 
-				if (pD[i_top] < 1)
+				if (pD[i_side] < 1)
 					continue;
 
 				//Check the need for velocity constraint checking for current top view candidate
-				if (bottom_per_top_match[i_top] > 1 & vel_check) {
+				if (bottom_per_side_match[i_side] > 1 & vel_check) {
 
 					//If it's the first time processing this bottom candidate, check its moving status:
 					if (need_to_check_bottom) {
@@ -1220,14 +1214,14 @@ std::vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_t
 					}
 
 					//If it's the first time processing this top candidate, check its moving status:
-					if (need_to_check[i_top]) {
+					if (need_to_check[i_side]) {
 
-						moving_t[i_top] = checkVelCriterion(Itbb, Itbb_prev, F.match_box_side() + C_t[i_top].point() + padding_pre_side, F.size_side().area(), moving_alpha_top, moving_threshold);
+						moving_t[i_side] = checkVelCriterion(Itbb, Itbb_prev, F.match_box_side() + C_t[i_side].point() + padding_pre_side, F.size_side().area(), moving_alpha_side, moving_threshold);
 
-						need_to_check[i_top] = false;
+						need_to_check[i_side] = false;
 					}
 
-					match = moving_b == moving_t[i_top];
+					match = moving_b == moving_t[i_side];
 				}
 				else {
 					match = true;
@@ -1235,7 +1229,7 @@ std::vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_t
 
 				if (match) {
 
-					Candidate C_temp = Candidate(C_t[i_top].point(), C_t[i_top].score() * pDTW[i_top]);
+					Candidate C_temp = Candidate(C_t[i_side].point(), C_t[i_side].score() * pDTW[i_side]);
 
 					if (is_first) {
 						C.push_back(P22D(C_b[i_bottom], C_temp));
@@ -1243,7 +1237,7 @@ std::vector<P22D> LocoMouse::matchViews(const cv::Mat &boolD, const cv::Mat &D_t
 					}
 					else {
 
-						C[C.size() - 1].add_top_candidate(C_temp);
+						C[C.size() - 1].add_side_candidate(C_temp);
 					}
 				}
 
@@ -1484,7 +1478,7 @@ void LocoMouse::cropBoundingBox() {
 }
 
 
-void LocoMouse::computeMouseBoxSize(std::vector<double> &bb_w, std::vector<double> &bb_hb, std::vector<double> &bb_ht, cv::Rect &BB_top, cv::Rect &BB_bottom) {
+void LocoMouse::computeMouseBoxSize(std::vector<double> &bb_w, std::vector<double> &bb_hb, std::vector<double> &bb_ht, cv::Rect &BB_side, cv::Rect &BB_bottom) {
 	/* Post-processes the per-frame bounding boxes to compute a sigle size based on the statistics of the observed boxes over the sequence*/
 
 	unsigned int N_frames = bb_w.size(); //Assumes all others have the same size.
@@ -1506,7 +1500,7 @@ void LocoMouse::computeMouseBoxSize(std::vector<double> &bb_w, std::vector<doubl
 	uint32_t final_hb = (median_hb_3std < bb_hb[N_frames - 1]) ? median_hb_3std : bb_hb[N_frames - 1];
 	uint32_t final_ht = (median_ht_3std < bb_ht[N_frames - 1]) ? median_ht_3std : bb_ht[N_frames - 1];
 
-	BB_top = cv::Rect(0, 0, final_w, final_ht);
+	BB_side = cv::Rect(0, 0, final_w, final_ht);
 	BB_bottom = cv::Rect(0, 0, final_w, final_hb);
 	return;
 }
@@ -1957,7 +1951,7 @@ MyMat LocoMouse::unaryCostBox(std::vector<Candidate> &p_candidates, cv::Rect &BB
 	return M;
 }
 
-MATSPARSE LocoMouse::pairwisePotential(std::vector<Candidate> &Ci, std::vector<Candidate> &Cip1, cv::Point_<double> &grid_mapping, double grid_spacing, std::vector< cv::Point_<double> > &ONGi, Size ONG_size, double max_displacement, double alpha_vel, double pairwise_occluded_cost) {
+MATSPARSE LocoMouse::pairwisePotential(std::vector<Candidate> &Ci, std::vector<Candidate> &Cip1, cv::Point_<double> &grid_mapping, double grid_spacing, std::vector< cv::Point_<double> > &ONGi, Size ONG_size, double max_displacement_bottom, double alpha_vel_bottom, double pairwise_occluded_cost) {
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "--- pairwisePotential() " << std::endl;
@@ -1972,7 +1966,7 @@ MATSPARSE LocoMouse::pairwisePotential(std::vector<Candidate> &Ci, std::vector<C
 
 	// << "ONG grid size: X-> " << ONG_size.width << " Y-> " << ONG_size.height << endl;
 
-	double pairwise_occluded_cost_alpha_vel = pairwise_occluded_cost * alpha_vel;
+	double pairwise_occluded_cost_alpha_vel = pairwise_occluded_cost * alpha_vel_bottom;
 
 	if (std::isinf(pairwise_occluded_cost_alpha_vel)) {
 		//FIXME: Throw execption
@@ -2036,12 +2030,12 @@ MATSPARSE LocoMouse::pairwisePotential(std::vector<Candidate> &Ci, std::vector<C
 			//DEBUG_TEXT << "Distance:" << Ci[i].point() << " " << Cip1[j].point()<< " " << dist  << endl;
 
 			//Check if it passes the criterion:
-			if (dist < max_displacement) {
+			if (dist < max_displacement_bottom) {
 				//If it passes, put it into D as the inverse distance:
-				double inv_dist = 1 - (dist / max_displacement);
+				double inv_dist = 1 - (dist / max_displacement_bottom);
 				//DEBUG_TEXT << "Transition (" << j << "," << i << ") has distance: " << inv_dist << endl;
 				
-				inv_dist = inv_dist * alpha_vel;
+				inv_dist = inv_dist * alpha_vel_bottom;
 				D.put(j, i, inv_dist);
 
 				if (std::isinf(inv_dist)) {
@@ -2076,12 +2070,12 @@ MATSPARSE LocoMouse::pairwisePotential(std::vector<Candidate> &Ci, std::vector<C
 }
 
 
-MATSPARSE LocoMouse::pairwisePotential_SideView(const std::vector<uint> &Zi, const std::vector<uint> &Zip1, double grid_mapping, double grid_spacing, const std::vector<uint> &ONGi, const unsigned int Nong, const double max_displacement, const double alpha_vel, const double pairwise_occluded_cost) {
+MATSPARSE LocoMouse::pairwisePotential_SideView(const std::vector<uint> &Zi, const std::vector<uint> &Zip1, double grid_mapping, double grid_spacing, const std::vector<uint> &ONGi, const unsigned int Nong, const double max_displacement_bottom, const double alpha_vel_bottom, const double pairwise_occluded_cost) {
 
 	int Ni = Zi.size();
 	int Nip1 = Zip1.size();
 
-	double pairwise_occluded_cost_alpha_vel = pairwise_occluded_cost * alpha_vel;
+	double pairwise_occluded_cost_alpha_vel = pairwise_occluded_cost * alpha_vel_bottom;
 
 	int Nong_aux = Nong - 1;
 
@@ -2115,11 +2109,11 @@ MATSPARSE LocoMouse::pairwisePotential_SideView(const std::vector<uint> &Zi, con
 			//cout << "Distance:" << Zi[i] << " " << Zip1[j] << " " << dist << endl;
 
 			//Check if it passes the criterion:
-			if (dist < max_displacement) {
+			if (dist < max_displacement_bottom) {
 				//If it passes, put it into D as the inverse distance:
-				double inv_dist = 1 - (dist / max_displacement);
+				double inv_dist = 1 - (dist / max_displacement_bottom);
 				//cout << "Transition (" << j << "," << i << ") has distance: " << inv_dist << endl;
-				D.put(j, i, inv_dist * alpha_vel);
+				D.put(j, i, inv_dist * alpha_vel_bottom);
 			}
 		}
 	}
@@ -2224,13 +2218,13 @@ void LocoMouse::computeSideTracks() {
 }
 
 
-cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const std::vector< std::vector<P22D> > &candidates_bottom_top_matched, const std::vector<uint> &ONG_side, const unsigned int lowest_point, const unsigned int N_features) {
+cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const std::vector< std::vector<P22D> > &candidates_bottom_side_matched, const std::vector<uint> &ONG_side, const unsigned int lowest_point, const unsigned int N_features) {
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "--- bestSideViewMatch() " << std::endl;
 	}
 
-	int Nong_top = ONG_side.size();
+	int Nong_side = ONG_side.size();
 
 	bool change_pointer_T = true;
 	if (T.isContinuous()) {
@@ -2250,8 +2244,8 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const std::vector< std::vecto
 		}
 
 		std::vector<unsigned int> Z_prev;
-		//vector <MyMat> unary_potential_top(N_frames);
-		//vector <MATSPARSE> pairwise_potential_top(N_frames - 1);
+		//vector <MyMat> unary_potential_side(N_frames);
+		//vector <MATSPARSE> pairwise_potential_side(N_frames - 1);
 
 		std::vector <MyMat> unary_potential_side;
 		unary_potential_side.reserve(N_FRAMES);
@@ -2276,16 +2270,16 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const std::vector< std::vecto
 				DEBUG_TEXT <<  "Frame number: " << i_frames << std::endl;
 			}
 
-			if (p_T[i_frames] < candidates_bottom_top_matched[i_frames].size()) {
+			if (p_T[i_frames] < candidates_bottom_side_matched[i_frames].size()) {
 				//There is a solution on the bottom view. Check for candidates on the side view:
 
-				frame_potentials = MyMat(candidates_bottom_top_matched[i_frames][p_T[i_frames]].number_of_candidates(), 1);
+				frame_potentials = MyMat(candidates_bottom_side_matched[i_frames][p_T[i_frames]].number_of_candidates(), 1);
 
-				for (int i_top = 0; i_top < candidates_bottom_top_matched[i_frames][p_T[i_frames]].number_of_candidates(); i_top++) {
+				for (int i_side = 0; i_side < candidates_bottom_side_matched[i_frames][p_T[i_frames]].number_of_candidates(); i_side++) {
 					//Copying the scores of top candidates
 
-					frame_potentials.put(i_top, 0, candidates_bottom_top_matched[i_frames][p_T[i_frames]].score_top(i_top));
-					Z.push_back(candidates_bottom_top_matched[i_frames][p_T[i_frames]].y_top_coord(i_top));
+					frame_potentials.put(i_side, 0, candidates_bottom_side_matched[i_frames][p_T[i_frames]].score_side(i_side));
+					Z.push_back(candidates_bottom_side_matched[i_frames][p_T[i_frames]].y_side_coord(i_side));
 
 				}
 
@@ -2314,7 +2308,7 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const std::vector< std::vecto
 
 				//Compute pairwise costs for the top view:
 
-				MATSPARSE temp_matsparse = pairwisePotential_SideView(Z_prev, Z, (double)lowest_point, (double)LM_PARAMS.occlusion_grid_spacing_pixels, ONG_side, Nong_top, LM_PARAMS.max_displacement_top, LM_PARAMS.alpha_vel_top, LM_PARAMS.pairwise_occluded_cost);
+				MATSPARSE temp_matsparse = pairwisePotential_SideView(Z_prev, Z, (double)lowest_point, (double)LM_PARAMS.occlusion_grid_spacing_pixels_side, ONG_side, Nong_side, LM_PARAMS.max_displacement_side, LM_PARAMS.alpha_vel_side, LM_PARAMS.pairwise_occluded_cost);
 				pairwise_potential_side.push_back(temp_matsparse);
 
 				if (LM_PARAMS.LM_DEBUG)
@@ -2334,7 +2328,7 @@ cv::Mat LocoMouse::bestSideViewMatch(const Mat& T, const std::vector< std::vecto
 		if (LM_PARAMS.LM_DEBUG)
 			DEBUG_TEXT << "Running match2nd on top view..." << endl;
 
-		cv::Mat temp = match2nd(unary_potential_side, pairwise_potential_side, Nong_top, 0, 0, N_FRAMES, 1, porder);
+		cv::Mat temp = match2nd(unary_potential_side, pairwise_potential_side, Nong_side, 0, 0, N_FRAMES, 1, porder);
 
 		temp.copyTo(T_side.row(i_feature));
 
@@ -2388,7 +2382,7 @@ void LocoMouse::exportResults() {
 	return;
 }
 
-void LocoMouse::exportPointTracks(const Mat& T_bottom, const Mat &T_top, const std::vector< std::vector<P22D> > &candidates_bottom_top_matched, const string feature_name, const unsigned int N_features) {
+void LocoMouse::exportPointTracks(const Mat& T_bottom, const Mat &T_side, const std::vector< std::vector<P22D> > &candidates_bottom_side_matched, const string feature_name, const unsigned int N_features) {
 
 	bool change_pointer_M = true;
 	if (T_bottom.isContinuous()) {
@@ -2407,7 +2401,7 @@ void LocoMouse::exportPointTracks(const Mat& T_bottom, const Mat &T_top, const s
 		}
 
 		//Pointer for side view match2nd results for paw i_paws
-		const int* p_T_top = T_top.ptr<int>(i_features);
+		const int* p_T_side = T_side.ptr<int>(i_features);
 
 		//Not sure initializing to ones and negating is faster, but whatever.
 		Mat M = -cv::Mat::ones(N_FRAMES, 3, CV_32SC1);
@@ -2421,21 +2415,21 @@ void LocoMouse::exportPointTracks(const Mat& T_bottom, const Mat &T_top, const s
 
 		for (int i_frames = 0; i_frames < N_FRAMES; ++i_frames) {
 			//DEBUG_TEXT << "Output frames: " << i_frames << endl;
-			if (p_T[i_frames] < candidates_bottom_top_matched[i_frames].size()) {
-				//debug << "Feature " << i_features << ", Frame " << i_frames << ", coordinates: " << candidates_bottom_top_matched[i_frames][p_T[i_frames]].x_coord() << ", " << candidates_bottom_top_matched[i_frames][p_T[i_frames]].y_bottom_coord() << endl;
+			if (p_T[i_frames] < candidates_bottom_side_matched[i_frames].size()) {
+				//debug << "Feature " << i_features << ", Frame " << i_frames << ", coordinates: " << candidates_bottom_side_matched[i_frames][p_T[i_frames]].x_coord() << ", " << candidates_bottom_side_matched[i_frames][p_T[i_frames]].y_bottom_coord() << endl;
 
-				p_M[0] = BB_X_POS[i_frames] - BB_BOTTOM_MOUSE.width + 1 + candidates_bottom_top_matched[i_frames][p_T[i_frames]].x_coord();
-				p_M[1] = BB_Y_BOTTOM_POS[i_frames] - BB_BOTTOM_MOUSE.height + 1 + candidates_bottom_top_matched[i_frames][p_T[i_frames]].y_bottom_coord();
+				p_M[0] = BB_X_POS[i_frames] - BB_BOTTOM_MOUSE.width + 1 + candidates_bottom_side_matched[i_frames][p_T[i_frames]].x_coord();
+				p_M[1] = BB_Y_BOTTOM_POS[i_frames] - BB_BOTTOM_MOUSE.height + 1 + candidates_bottom_side_matched[i_frames][p_T[i_frames]].y_bottom_coord();
 
 				/*if (i_features == 1 & i_frames == 12) {
 				cout << "M_bottom: " << p_T[i_frames] << endl;
-				cout << "M_value: " << p_T_top[i_frames] << endl;
-				cout << "N candidates: " << candidates_bottom_top_matched[i_frames][p_T[i_frames]].number_of_candidates() << endl;
+				cout << "M_value: " << p_T_side[i_frames] << endl;
+				cout << "N candidates: " << candidates_bottom_side_matched[i_frames][p_T[i_frames]].number_of_candidates() << endl;
 				}*/
 
-				if (p_T_top[i_frames] < candidates_bottom_top_matched[i_frames][p_T[i_frames]].number_of_candidates()) {
+				if (p_T_side[i_frames] < candidates_bottom_side_matched[i_frames][p_T[i_frames]].number_of_candidates()) {
 
-					p_M[2] = BB_Y_SIDE_POS[i_frames] - BB_SIDE_MOUSE.height + 1 + candidates_bottom_top_matched[i_frames][p_T[i_frames]].y_top_coord(p_T_top[i_frames]);
+					p_M[2] = BB_Y_SIDE_POS[i_frames] - BB_SIDE_MOUSE.height + 1 + candidates_bottom_side_matched[i_frames][p_T[i_frames]].y_side_coord(p_T_side[i_frames]);
 
 				}
 
@@ -2508,7 +2502,7 @@ void LocoMouse::exportTracksBottom(const Mat& T_bottom, const std::vector< std::
 		}
 
 		//Pointer for side view match2nd results for paw i_paws
-		//const int* p_T_top = T_top[i_features].ptr<int>(0);
+		//const int* p_T_side = T_side[i_features].ptr<int>(0);
 
 		cv::Mat M = -cv::Mat::ones(N_FRAMES, 3, CV_32SC1);
 
@@ -2584,7 +2578,7 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature &F, const unsign
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Filtering tail done (both views)" << endl;
 		//debug_locomouse << "Filtered_tail_bottom_pad" << Filtered_tail_bottom_pad;
-		//debug_locomouse << "Filtered_tail_top_pad" << Filtered_tail_side_pad;
+		//debug_locomouse << "Filtered_tail_side_pad" << Filtered_tail_side_pad;
 	}
 
 	//Unpadding the tail image:
@@ -2626,10 +2620,10 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature &F, const unsign
 		DEBUG_TEXT << "Filtered_tail_side.size(): " << Filtered_tail_side.size() << std::endl;
 	}
 
-	cv::Mat tail_mask_top = cv::repeat(tail_bottom_x_location, Filtered_tail_side.rows, 1);
-	cv::Mat Filtered_tail_top_binary = (Filtered_tail_side > 0) & tail_mask_top;
+	cv::Mat tail_mask_side = cv::repeat(tail_bottom_x_location, Filtered_tail_side.rows, 1);
+	cv::Mat Filtered_tail_side_binary = (Filtered_tail_side > 0) & tail_mask_side;
 
-	selectLargestRegion(Filtered_tail_top_binary, Filtered_tail_top_binary);
+	selectLargestRegion(Filtered_tail_side_binary, Filtered_tail_side_binary);
 
 	if (LM_PARAMS.LM_DEBUG) {
 		DEBUG_TEXT << "Select largest top region done." << endl;
@@ -2691,7 +2685,7 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature &F, const unsign
 		}
 
 		cv::Rect BB_tail_segment_bottom = cv::Rect(first_last[0], 0, 1, Filtered_tail_bottom_binary.rows);
-		cv::Rect BB_tail_segment_top = cv::Rect(first_last[0], 0, 1, Filtered_tail_top_binary.rows);
+		cv::Rect BB_tail_segment_side = cv::Rect(first_last[0], 0, 1, Filtered_tail_side_binary.rows);
 
 		int* p_tail_x = TailTracks.ptr<int>(0);
 		int* p_tail_y = TailTracks.ptr<int>(1);
@@ -2708,7 +2702,7 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature &F, const unsign
 			for (int i = 0; i < N_line_points; i++) {
 
 				if (LM_PARAMS.LM_DEBUG) {
-					DEBUG_TEXT << "Filtered_tail_bottom_binary size: " << Filtered_tail_top_binary.size() << endl;
+					DEBUG_TEXT << "Filtered_tail_bottom_binary size: " << Filtered_tail_side_binary.size() << endl;
 					DEBUG_TEXT << "bb_tail_segment_bottom_width: " << bb_tail_segment_bottom_width[i] << endl;
 				}
 
@@ -2733,12 +2727,12 @@ cv::Mat LocoMouse::detectLineCandidates(const LocoMouse_Feature &F, const unsign
 			//Tail top:
 			for (int i = 0; i < N_line_points; i++) {
 				if (p_tail_x[i] > 0) {
-					BB_tail_segment_top.x = p_tail_x[i];
+					BB_tail_segment_side.x = p_tail_x[i];
 
-					Itail_segment = Filtered_tail_top_binary(BB_tail_segment_top);
+					Itail_segment = Filtered_tail_side_binary(BB_tail_segment_side);
 					M = cv::moments(Itail_segment, true);
 					if (M.m00 > 0)
-						p_tail_z[i] = (int)(M.m01 / M.m00) + BB_tail_segment_top.y;
+						p_tail_z[i] = (int)(M.m01 / M.m00) + BB_tail_segment_side.y;
 				}
 			}
 		}
@@ -2821,10 +2815,10 @@ void LocoMouse::exportDebugVariables() {
 	DEBUG_OUTPUT << "N_frames" << (int)N_FRAMES;
 
 	//Occluded distance:
-	DEBUG_OUTPUT << "occluded_distance" << LM_PARAMS.max_displacement;
+	DEBUG_OUTPUT << "occluded_distance" << LM_PARAMS.max_displacement_bottom;
 
 	//Writing the BBs:
-	DEBUG_OUTPUT << "BB_top" << "{" << "x" << BB_SIDE_MOUSE.x << "y" << BB_SIDE_MOUSE.y << "width" << BB_SIDE_MOUSE.width << "height" << BB_SIDE_MOUSE.height << "}";
+	DEBUG_OUTPUT << "BB_side" << "{" << "x" << BB_SIDE_MOUSE.x << "y" << BB_SIDE_MOUSE.y << "width" << BB_SIDE_MOUSE.width << "height" << BB_SIDE_MOUSE.height << "}";
 
 	DEBUG_OUTPUT << "BB_bottom" << "{" << "x" << BB_BOTTOM_MOUSE.x << "y" << BB_BOTTOM_MOUSE.y << "width" << BB_BOTTOM_MOUSE.width << "height" << BB_BOTTOM_MOUSE.height << "}";
 
@@ -2861,8 +2855,8 @@ void LocoMouse::exportDebugVariables() {
 	}
 	DEBUG_OUTPUT << "]" << "}";
 
-	//Writing the ONG_top points:
-	DEBUG_OUTPUT << "ONG_top" << "{";
+	//Writing the ONG_side points:
+	DEBUG_OUTPUT << "ONG_side" << "{";
 	DEBUG_OUTPUT << "points" << (int)ONG_SIDE.size();
 	DEBUG_OUTPUT << "z_coordinates" << "[:";
 
@@ -2872,7 +2866,7 @@ void LocoMouse::exportDebugVariables() {
 	DEBUG_OUTPUT << "]" << "}";
 
 	//Writing the candidates for the paw:
-	DEBUG_OUTPUT << "candidates_paw_bottom_top_matched" << "[";
+	DEBUG_OUTPUT << "candidates_paw_bottom_side_matched" << "[";
 	for (uint i = 0; i < N_FRAMES; i++) {
 		DEBUG_OUTPUT << "[";
 		for (uint j = 0; j < CANDIDATES_MATCHED_VIEWS_PAW[i].size(); j++) {
@@ -2883,7 +2877,7 @@ void LocoMouse::exportDebugVariables() {
 	DEBUG_OUTPUT << "]";
 
 	//Writing the candidates for the snout:
-	DEBUG_OUTPUT << "candidates_snout_bottom_top_matched" << "[";
+	DEBUG_OUTPUT << "candidates_snout_bottom_side_matched" << "[";
 	for (uint i = 0; i < N_FRAMES; i++) {
 		DEBUG_OUTPUT << "[";
 
@@ -2944,15 +2938,15 @@ LocoMouse_Feature::LocoMouse_Feature() : w_b(cv::Mat::zeros(cv::Size(1, 1), CV_8
 	w_avg_j = cv::Mat::zeros(cv::Size(1, 1), CV_64FC1);
 };
 
-LocoMouse_Feature::LocoMouse_Feature(cv::Mat window_bottom, cv::Mat window_top, double bias_bottom, double bias_top) {
+LocoMouse_Feature::LocoMouse_Feature(cv::Mat window_bottom, cv::Mat window_side, double bias_bottom, double bias_side) {
 
 	w_b = window_bottom;
-	w_s = window_top;
+	w_s = window_side;
 	rho_b = bias_bottom;
-	rho_s = bias_top;
+	rho_s = bias_side;
 
 	size_b = window_bottom.size();
-	size_s = window_top.size();
+	size_s = window_side.size();
 
 	//Velocity Matching Mask is defined as a mask with half the size of the detector.
 	//The mask is built so that Mask + Point centers the mask at the point coordinates.
@@ -3105,66 +3099,65 @@ LocoMouse_Model::LocoMouse_Model(std::string file_name) {
 		throw std::invalid_argument(Stream_Formatter() << "Error: Could not open the model file: " << file_name << '\n');
 	}
 
-	cv::Mat w_paw_b, w_paw_t, w_snout_b, w_snout_t, w_tail_b, w_tail_t;
-	double rho_paw_b, rho_paw_t, rho_snout_b, rho_snout_t, rho_tail_b, rho_tail_t;
+	cv::Mat w_paw_b, w_paw_s, w_snout_b, w_snout_s, w_tail_b, w_tail_s;
+	double rho_paw_b, rho_paw_s, rho_snout_b, rho_snout_s, rho_tail_b, rho_tail_s;
 
 	//Read matrices:
-	//FIXME: Find a way to throw an exception here!
-	model_file["modelPaw_top"] >> w_paw_t;
-	if (w_paw_t.empty()) {
+	model_file["modelPaw_side"] >> w_paw_s;
+	if (w_paw_s.empty()) {
 		model_file.release();
-		throw std::invalid_argument(Stream_Formatter() << "Error: modelPaw_top cannot be empty." << file_name << '\n');
+		throw std::invalid_argument(Stream_Formatter() << "Error: modelPaw_side cannot be empty." << file_name << '\n');
 	};
 
 	model_file["modelPaw_bottom"] >> w_paw_b;
-	if (w_paw_t.empty()) {
+	if (w_paw_b.empty()) {
 		model_file.release();
 		throw std::invalid_argument(Stream_Formatter() << "Error: modelPaw_bottom cannot be empty." << file_name << '\n');
 	};
 
-	model_file["modelTail_top"] >> w_tail_t;
-	if (w_paw_t.empty()) {
+	model_file["modelTail_side"] >> w_tail_s;
+	if (w_tail_s.empty()) {
 		model_file.release();
-		throw std::invalid_argument(Stream_Formatter() << "Error: modelTail_top cannot be empty." << file_name << '\n');
+		throw std::invalid_argument(Stream_Formatter() << "Error: modelTail_side cannot be empty." << file_name << '\n');
 	};
 
 	model_file["modelTail_bottom"] >> w_tail_b;
-	if (w_paw_t.empty()) {
+	if (w_tail_b.empty()) {
 		model_file.release();
 		throw std::invalid_argument(Stream_Formatter() << "Error: modelTail_bottom cannot be empty." << file_name << '\n');
 	};
 
-	model_file["modelSnout_top"] >> w_snout_t;
-	if (w_paw_t.empty()) {
+	model_file["modelSnout_side"] >> w_snout_s;
+	if (w_snout_s.empty()) {
 		model_file.release();
-		throw std::invalid_argument(Stream_Formatter() << "Error: modelSnout_top cannot be empty." << file_name << '\n');
+		throw std::invalid_argument(Stream_Formatter() << "Error: modelSnout_side cannot be empty." << file_name << '\n');
 	};
 
 	model_file["modelSnout_bottom"] >> w_snout_b;
-	if (w_paw_t.empty()) {
+	if (w_snout_b.empty()) {
 		model_file.release();
 		throw std::invalid_argument(Stream_Formatter() << "Error: modelSnout_bottom cannot be empty." << file_name << '\n');
 	};
 
 	//FIXME: How to check if these exist? If not defined will they be set to 0?
-	model_file["biasPaw_top"] >> rho_paw_t;
+	model_file["biasPaw_side"] >> rho_paw_s;
 	model_file["biasPaw_bottom"] >> rho_paw_b;
-	model_file["biasTail_top"] >> rho_tail_t;
+	model_file["biasTail_side"] >> rho_tail_s;
 	model_file["biasTail_bottom"] >> rho_tail_b;
-	model_file["biasSnout_top"] >> rho_snout_t;
+	model_file["biasSnout_side"] >> rho_snout_s;
 	model_file["biasSnout_bottom"] >> rho_snout_b;
 
 	model_file.release();
 
-	paw = LocoMouse_Feature(w_paw_b, w_paw_t, rho_paw_b, rho_paw_t);
-	snout = LocoMouse_Feature(w_snout_b, w_snout_t, rho_snout_b, rho_snout_t);
-	tail = LocoMouse_Feature(w_tail_b, w_tail_t, rho_tail_b, rho_tail_t);
+	paw = LocoMouse_Feature(w_paw_b, w_paw_s, rho_paw_b, rho_paw_s);
+	snout = LocoMouse_Feature(w_snout_b, w_snout_s, rho_snout_b, rho_snout_s);
+	tail = LocoMouse_Feature(w_tail_b, w_tail_s, rho_tail_b, rho_tail_s);
 
 	//Pre and Post are properties of the set of models:
-	spre_t = cv::Size(ceil((double)(std::max(w_paw_t.cols, w_snout_t.cols) - 1) / 2), ceil((double)(std::max(w_paw_t.rows, w_snout_t.rows) - 1) / 2));
+	spre_t = cv::Size(ceil((double)(std::max(w_paw_s.cols, w_snout_s.cols) - 1) / 2), ceil((double)(std::max(w_paw_s.rows, w_snout_s.rows) - 1) / 2));
 	spre_b = cv::Size(ceil((double)(std::max(w_paw_b.cols, w_snout_b.cols) - 1) / 2), ceil((double)(std::max(w_paw_b.rows, w_snout_b.rows) - 1) / 2));
 
-	spost_t = cv::Size((std::max(w_paw_t.cols, w_snout_t.cols) - 1) / 2, (std::max(w_paw_t.rows, w_snout_t.rows) - 1) / 2);
+	spost_t = cv::Size((std::max(w_paw_s.cols, w_snout_s.cols) - 1) / 2, (std::max(w_paw_s.rows, w_snout_s.rows) - 1) / 2);
 	spost_b = cv::Size((std::max(w_paw_b.cols, w_snout_b.cols) - 1) / 2, (std::max(w_paw_b.rows, w_snout_b.rows) - 1) / 2);
 }
 
